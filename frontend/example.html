@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Octapus AI V4 - Puter Agent Example</title>
+  <script src="https://js.puter.com/v2/"></script>
+  <script src="./puter-agent.js"></script>
+</head>
+<body>
+  <button id="login">Sign in with Puter</button>
+  <input id="q" value="Best romantic places in Munnar for 2 days" style="width:70%" />
+  <button id="ask">Ask</button>
+  <pre id="out"></pre>
+  <script>
+    document.getElementById('login').onclick = async () => {
+      await OctapusPuterV4.signIn();
+      document.getElementById('out').textContent = 'Puter signed in.';
+    };
+    document.getElementById('ask').onclick = async () => {
+      const out = document.getElementById('out');
+      out.textContent = 'Thinking…';
+      try {
+        const result = await OctapusPuterV4.ask({
+          apiBase: 'http://localhost:5000',
+          message: document.getElementById('q').value,
+          history: []
+        });
+        out.textContent = result.answer;
+      } catch (e) {
+        out.textContent = e.stack || e.message || String(e);
+      }
+    };
+  </script>
+</body>
+</html>
