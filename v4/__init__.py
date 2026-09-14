@@ -1,1 +1,1 @@
-# Octapus AI V4 package
+__version__ = "4.2.0"

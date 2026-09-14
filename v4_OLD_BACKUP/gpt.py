@@ -4,11 +4,7 @@ import json
 import time
 import math
 import hashlib
-import functools
 import traceback
-import threading
-from concurrent.futures import ThreadPoolExecutor
-from collections import defaultdict
 import requests
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Tuple
@@ -20,10 +16,7 @@ from dotenv import load_dotenv
 import firebase_admin
 from firebase_admin import credentials, firestore
 from google.api_core.exceptions import ResourceExhausted, GoogleAPIError
-try:
-    from groq import Groq
-except ImportError:  # Groq is optional in Puter mode.
-    Groq = None
+from groq import Groq
 try:
     from .live_search import tavily_live_search
     from .intent_detector import should_use_live_search, build_live_search_query
@@ -45,11 +38,6 @@ except ImportError:
     from intelligence.query_planner import plan as build_research_plan
     from intelligence.evidence import normalize_web_results
     from tools.weather import get_weather
-
-try:
-    from .performance import TTLCache, Metrics, stable_key
-except ImportError:
-    from performance import TTLCache, Metrics, stable_key
 
 
 # ============================================================
@@ -94,25 +82,13 @@ DEFAULT_CARD_LIMIT = int(os.getenv("DEFAULT_CARD_LIMIT", "7"))
 EXPLAIN_CARD_LIMIT = int(os.getenv("EXPLAIN_CARD_LIMIT", "1"))
 
 CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", str(60 * 60 * 6)))
-LOCAL_CACHE_FILE = os.getenv("LOCAL_CACHE_FILE", os.path.join(os.path.dirname(__file__), "places_cache.json"))
+LOCAL_CACHE_FILE = os.getenv("LOCAL_CACHE_FILE", "places_cache.json")
 REQUEST_TIMEOUT_SECONDS = int(os.getenv("REQUEST_TIMEOUT_SECONDS", "12"))
 
-ENABLE_DEBUG_LOGS = os.getenv("ENABLE_DEBUG_LOGS", "false").lower() in ["1", "true", "yes", "on"]
+ENABLE_DEBUG_LOGS = os.getenv("ENABLE_DEBUG_LOGS", "true").lower() in ["1", "true", "yes", "on"]
 ENABLE_GROQ = os.getenv("ENABLE_GROQ", "false").lower() in ["1", "true", "yes", "on"]
 ALLOWED_ORIGINS = [x.strip() for x in os.getenv("ALLOWED_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",") if x.strip()]
 LOCATION_CACHE_TTL_SECONDS = int(os.getenv("LOCATION_CACHE_TTL_SECONDS", "300"))
-
-# V4.2 performance / reliability controls.
-MIN_EXPECTED_PLACE_COUNT = int(os.getenv("MIN_EXPECTED_PLACE_COUNT", "1000"))
-PREWARM_PLACES = os.getenv("PREWARM_PLACES", "true").lower() in ["1", "true", "yes", "on"]
-WRITE_LOCAL_CACHE = os.getenv("WRITE_LOCAL_CACHE", "false").lower() in ["1", "true", "yes", "on"]
-SEARCH_CACHE_TTL_SECONDS = int(os.getenv("SEARCH_CACHE_TTL_SECONDS", "30"))
-LIVE_SEARCH_CACHE_TTL_SECONDS = int(os.getenv("LIVE_SEARCH_CACHE_TTL_SECONDS", "45"))
-WEATHER_CACHE_TTL_SECONDS = int(os.getenv("WEATHER_CACHE_TTL_SECONDS", "120"))
-TRAVEL_CACHE_TTL_SECONDS = int(os.getenv("TRAVEL_CACHE_TTL_SECONDS", "600"))
-KNOWLEDGE_CACHE_TTL_SECONDS = int(os.getenv("KNOWLEDGE_CACHE_TTL_SECONDS", "600"))
-OSM_CACHE_TTL_SECONDS = int(os.getenv("OSM_CACHE_TTL_SECONDS", "60"))
-MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(256 * 1024)))
 
 
 # ============================================================
@@ -121,29 +97,6 @@ MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(256 * 1024)
 
 app = Flask(__name__)
 CORS(app, origins=ALLOWED_ORIGINS, supports_credentials=False)
-app.config["MAX_CONTENT_LENGTH"] = MAX_REQUEST_BODY_BYTES
-
-
-@app.before_request
-def _v42_request_start():
-    request.environ["_octopus_started"] = time.perf_counter()
-
-
-@app.after_request
-def _v42_request_end(response):
-    V4_METRICS.request(ok=response.status_code < 500)
-    started = request.environ.get("_octopus_started")
-    if started:
-        elapsed = (time.perf_counter() - started) * 1000
-        # Keep a compact endpoint timing histogram.
-        endpoint = request.endpoint or "unknown"
-        with V4_METRICS._lock:
-            bucket = V4_METRICS.timings.setdefault("http:" + endpoint, {"count": 0, "total_ms": 0.0, "max_ms": 0.0})
-            bucket["count"] += 1
-            bucket["total_ms"] += elapsed
-            bucket["max_ms"] = max(bucket["max_ms"], elapsed)
-    response.headers["X-Octopus-Version"] = "v4.2"
-    return response
 
 
 # ============================================================
@@ -224,7 +177,7 @@ STATION_ALIASES = {
 
 groq_client = None
 
-if GROQ_API_KEY and ENABLE_GROQ and Groq is not None:
+if GROQ_API_KEY and ENABLE_GROQ:
     groq_client = Groq(api_key=GROQ_API_KEY)
 
 
@@ -235,21 +188,6 @@ if GROQ_API_KEY and ENABLE_GROQ and Groq is not None:
 PLACES_CACHE: List[Dict[str, Any]] = []
 PLACES_CACHE_TIME: float = 0
 PLACES_INDEX: Dict[str, Any] = {}
-PLACES_CACHE_SOURCE = "empty"
-PLACES_CACHE_LOAD_SECONDS = 0.0
-PLACES_CACHE_ERROR = ""
-PLACES_CACHE_LOCK = threading.RLock()
-PLACES_CACHE_LOADING = False
-
-# Fast process-local caches. They are deliberately bounded so a Render free
-# worker cannot grow without limit during long sessions.
-V4_SEARCH_CACHE = TTLCache(maxsize=1024, ttl=SEARCH_CACHE_TTL_SECONDS)
-V4_LIVE_CACHE = TTLCache(maxsize=256, ttl=LIVE_SEARCH_CACHE_TTL_SECONDS)
-V4_WEATHER_CACHE = TTLCache(maxsize=256, ttl=WEATHER_CACHE_TTL_SECONDS)
-V4_TRAVEL_CACHE = TTLCache(maxsize=256, ttl=TRAVEL_CACHE_TTL_SECONDS)
-V4_KNOWLEDGE_CACHE_V42 = TTLCache(maxsize=512, ttl=KNOWLEDGE_CACHE_TTL_SECONDS)
-V4_OSM_CACHE_V42 = TTLCache(maxsize=512, ttl=OSM_CACHE_TTL_SECONDS)
-V4_METRICS = Metrics()
 
 
 # ============================================================
@@ -562,18 +500,15 @@ OSM_COLLECTION = "osm_places"
 OSM_TYPE_MAP = {
     "food": ["restaurant", "cafe", "fast_food", "food_court"],
     "osm_stay": ["hotel", "resort", "guest_house", "hostel"],
-    "osm_health": ["hospital", "clinic", "doctors", "pharmacy", "dentist", "nursing_home", "veterinary"],
+    "osm_health": ["hospital", "clinic", "doctors", "pharmacy", "dentist", "nursing_home"],
     "osm_transport": [
         "bus_stop", "bus_station", "station", "halt",
         "airport", "aerodrome", "terminal",
-        "ferry_terminal", "taxi", "parking", "car_park"
+        "ferry_terminal", "taxi"
     ],
     "osm_emergency": ["police", "fire_station"],
     "osm_money": ["atm", "bank"],
-    "osm_fuel": ["fuel", "charging_station", "ev_charging"],
-    "osm_shopping": ["mall", "supermarket", "marketplace", "department_store", "bakery"],
-    "osm_worship": ["place_of_worship", "temple", "church", "mosque"],
-    "osm_education": ["school", "college", "university", "library"],
+    "osm_fuel": ["fuel", "charging_station"],
 }
 
 OSM_INTENT_KEYWORDS = {
@@ -700,7 +635,6 @@ def normalize_place(doc_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
     latitude = safe_float(data.get("latitude") or data.get("lat"), 0.0)
     longitude = safe_float(data.get("longitude") or data.get("lng") or data.get("lon"), 0.0)
     coordinates_available = valid_coordinates(latitude, longitude)
-    rating = safe_float(data.get("rating"), 0.0)
     quality_score = 1.0
     if not description or len(description) < 24: quality_score -= .25
     if not category: quality_score -= .1
@@ -734,17 +668,6 @@ def normalize_place(doc_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         "qualityScore": round(max(0.0, quality_score), 2),
         "isRecommendationEligible": quality_score >= .5,
         "search_blob": normalize_text(search_blob),
-        "_name_norm": normalize_text(name),
-        "_region_norm": normalize_text(region),
-        "_district_norm": normalize_text(district),
-        "_category_norm": normalize_text(category),
-        "_tags_norm": " ".join(normalize_text(t) for t in tags),
-        "_aliases_norm": " ".join(normalize_text(t) for t in aliases + generated_aliases),
-        "_name_tokens": tuple(tokenize(name)),
-        "_region_tokens": tuple(tokenize(region)),
-        "_district_tokens": tuple(tokenize(district)),
-        "_category_tokens": tuple(tokenize(category)),
-        "_tag_tokens": tuple(tokenize(" ".join(tags))),
         "hasImage": bool(image_url),
     }
 
@@ -834,140 +757,85 @@ def load_places_from_local_cache() -> List[Dict[str, Any]]:
 
 
 def load_places_from_firestore(force: bool = False) -> List[Dict[str, Any]]:
-    """
-    Load the canonical place dataset once per worker.
-
-    V4.1 had a dangerous fast path: any bundled local cache was treated as
-    authoritative even when it contained only a small/stale subset. V4.2
-    treats Firestore as the source of truth whenever it is configured and the
-    local cache is stale/small, while still retaining the local cache as an
-    offline fallback.
-    """
     global PLACES_CACHE, PLACES_CACHE_TIME, PLACES_INDEX
-    global PLACES_CACHE_SOURCE, PLACES_CACHE_LOAD_SECONDS, PLACES_CACHE_ERROR
-    global PLACES_CACHE_LOADING
 
-    now = time.time()
+    current_time = time.time()
+    cache_valid = PLACES_CACHE and not force and (current_time - PLACES_CACHE_TIME) < CACHE_TTL_SECONDS
 
-    with PLACES_CACHE_LOCK:
-        if PLACES_CACHE and not force and (now - PLACES_CACHE_TIME) < CACHE_TTL_SECONDS:
-            return PLACES_CACHE
+    if cache_valid:
+        return PLACES_CACHE
 
-        # If another request is warming the dataset, wait by holding the lock.
-        # This guarantees one Firestore scan per worker instead of N concurrent
-        # scans after a cold start.
-        local_places: List[Dict[str, Any]] = []
-        try:
-            local_places = load_places_from_local_cache()
-        except Exception:
-            local_places = []
-
-        local_saved_at = 0.0
-        try:
-            if os.path.exists(LOCAL_CACHE_FILE):
-                with open(LOCAL_CACHE_FILE, "r", encoding="utf-8") as fh:
-                    payload = json.load(fh)
-                saved_at = payload.get("savedAt")
-                if saved_at:
-                    local_saved_at = datetime.fromisoformat(str(saved_at).replace("Z", "+00:00")).timestamp()
-        except Exception:
-            local_saved_at = 0.0
-
-        local_fresh = bool(local_places) and bool(local_saved_at) and (now - local_saved_at) < CACHE_TTL_SECONDS
-        local_is_large_enough = len(local_places) >= MIN_EXPECTED_PLACE_COUNT
-
-        # A full, fresh local cache is faster than Firestore.
-        if not force and local_fresh and local_is_large_enough:
+    if not PLACES_CACHE and not force:
+        local_places = load_places_from_local_cache()
+        if local_places:
             PLACES_CACHE = local_places
-            PLACES_CACHE_TIME = now
+            PLACES_CACHE_TIME = current_time
             PLACES_INDEX = build_places_index(PLACES_CACHE)
-            if "V4_PLACE_TOKEN_INDEX" in globals():
-                globals()["V4_PLACE_TOKEN_INDEX"] = {}
-                globals()["V4_PLACE_TOKEN_INDEX_READY"] = False
-                if "V4_SEARCH_CACHE" in globals():
-                    V4_SEARCH_CACHE.clear()
-            PLACES_CACHE_SOURCE = "local_cache"
-            PLACES_CACHE_ERROR = ""
             return PLACES_CACHE
 
-        if db is None:
-            if local_places:
-                PLACES_CACHE = local_places
-                PLACES_CACHE_TIME = now
-                PLACES_INDEX = build_places_index(PLACES_CACHE)
-                if "V4_PLACE_TOKEN_INDEX" in globals():
-                    globals()["V4_PLACE_TOKEN_INDEX"] = {}
-                    globals()["V4_PLACE_TOKEN_INDEX_READY"] = False
-                    if "V4_SEARCH_CACHE" in globals():
-                        V4_SEARCH_CACHE.clear()
-                PLACES_CACHE_SOURCE = "local_cache_fallback"
-                PLACES_CACHE_ERROR = "Firestore is not configured."
-                return PLACES_CACHE
-            PLACES_CACHE_SOURCE = "unavailable"
-            PLACES_CACHE_ERROR = "Firestore is not configured and no local cache exists."
-            return []
-
-        started = time.perf_counter()
-        PLACES_CACHE_LOADING = True
-        try:
-            places: List[Dict[str, Any]] = []
-            docs = db.collection(FIRESTORE_COLLECTION).stream()
-            for doc in docs:
-                data = doc.to_dict() or {}
-                places.append(normalize_place(doc.id, data))
-
-            if not places:
-                raise RuntimeError("Firestore returned zero place documents.")
-
-            PLACES_CACHE = places
-            PLACES_CACHE_TIME = time.time()
+    places = []
+    if db is None:
+        local_places = load_places_from_local_cache()
+        if local_places:
+            PLACES_CACHE = local_places
+            PLACES_CACHE_TIME = current_time
             PLACES_INDEX = build_places_index(PLACES_CACHE)
-            if "V4_PLACE_TOKEN_INDEX" in globals():
-                globals()["V4_PLACE_TOKEN_INDEX"] = {}
-                globals()["V4_PLACE_TOKEN_INDEX_READY"] = False
-                if "V4_SEARCH_CACHE" in globals():
-                    V4_SEARCH_CACHE.clear()
-            PLACES_CACHE_SOURCE = "firestore"
-            PLACES_CACHE_ERROR = ""
-            PLACES_CACHE_LOAD_SECONDS = round(time.perf_counter() - started, 3)
-
-            # Only write a large cache when explicitly enabled. Render's free
-            # filesystem is ephemeral, so Firestore remains authoritative there.
-            if WRITE_LOCAL_CACHE:
-                save_places_to_local_cache(PLACES_CACHE)
-
-            debug_log("Places cache refreshed from Firestore", {
-                "collection": FIRESTORE_COLLECTION,
-                "count": len(PLACES_CACHE),
-                "withImages": len(PLACES_INDEX.get("with_images", [])),
-                "seconds": PLACES_CACHE_LOAD_SECONDS,
-            })
             return PLACES_CACHE
+        return []
 
-        except Exception as exc:
-            PLACES_CACHE_LOAD_SECONDS = round(time.perf_counter() - started, 3)
-            PLACES_CACHE_ERROR = str(exc)[:500]
-            debug_log("Firestore place refresh failed", {
-                "error": PLACES_CACHE_ERROR,
-                "seconds": PLACES_CACHE_LOAD_SECONDS,
-            })
-            if local_places:
-                PLACES_CACHE = local_places
-                PLACES_CACHE_TIME = now
-                PLACES_INDEX = build_places_index(PLACES_CACHE)
-                if "V4_PLACE_TOKEN_INDEX" in globals():
-                    globals()["V4_PLACE_TOKEN_INDEX"] = {}
-                    globals()["V4_PLACE_TOKEN_INDEX_READY"] = False
-                    if "V4_SEARCH_CACHE" in globals():
-                        V4_SEARCH_CACHE.clear()
-                PLACES_CACHE_SOURCE = "local_cache_fallback"
-                return PLACES_CACHE
-            if PLACES_CACHE:
-                PLACES_CACHE_SOURCE = "stale_memory"
-                return PLACES_CACHE
-            raise
-        finally:
-            PLACES_CACHE_LOADING = False
+    try:
+        docs = db.collection(FIRESTORE_COLLECTION).stream()
+        for doc in docs:
+            data = doc.to_dict() or {}
+            places.append(normalize_place(doc.id, data))
+
+        PLACES_CACHE = places
+        PLACES_CACHE_TIME = current_time
+        PLACES_INDEX = build_places_index(PLACES_CACHE)
+        save_places_to_local_cache(PLACES_CACHE)
+
+        debug_log("Places cache refreshed from Firestore", {
+            "collection": FIRESTORE_COLLECTION,
+            "count": len(PLACES_CACHE),
+            "withImages": len(PLACES_INDEX.get("with_images", [])),
+        })
+        return PLACES_CACHE
+
+    except ResourceExhausted as e:
+        debug_log("Firestore quota exceeded", str(e))
+        if PLACES_CACHE:
+            return PLACES_CACHE
+        local_places = load_places_from_local_cache()
+        if local_places:
+            PLACES_CACHE = local_places
+            PLACES_CACHE_TIME = current_time
+            PLACES_INDEX = build_places_index(PLACES_CACHE)
+            return PLACES_CACHE
+        raise RuntimeError("Firestore quota exceeded and no local cache exists yet.")
+
+    except GoogleAPIError as e:
+        debug_log("Firestore Google API error", str(e))
+        if PLACES_CACHE:
+            return PLACES_CACHE
+        local_places = load_places_from_local_cache()
+        if local_places:
+            PLACES_CACHE = local_places
+            PLACES_CACHE_TIME = current_time
+            PLACES_INDEX = build_places_index(PLACES_CACHE)
+            return PLACES_CACHE
+        raise
+
+    except Exception as e:
+        debug_log("Firestore unknown error", str(e))
+        if PLACES_CACHE:
+            return PLACES_CACHE
+        local_places = load_places_from_local_cache()
+        if local_places:
+            PLACES_CACHE = local_places
+            PLACES_CACHE_TIME = current_time
+            PLACES_INDEX = build_places_index(PLACES_CACHE)
+            return PLACES_CACHE
+        raise
 
 
 def get_place_by_id(place_id: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -1193,28 +1061,17 @@ def extract_districts(message: str) -> List[str]:
     return unique_list(found)
 
 
-@functools.lru_cache(maxsize=1024)
-def _query_features(query: str):
-    q = apply_query_aliases(query)
-    return (
-        q,
-        tuple(tokenize(q)),
-        tuple(extract_moods(q)),
-        tuple(extract_districts(q)),
-    )
-
-
 def place_search_score(query: str, place: Dict[str, Any]) -> float:
-    q, q_tokens_tuple, moods_tuple, districts_tuple = _query_features(query)
-    name = place.get("_name_norm") or normalize_text(place.get("name", ""))
+    q = apply_query_aliases(query)
+    name = normalize_text(place.get("name", ""))
     slug = normalize_text(place.get("slug", ""))
-    region = place.get("_region_norm") or normalize_text(place.get("region", ""))
-    district = place.get("_district_norm") or normalize_text(place.get("district", ""))
-    category = place.get("_category_norm") or normalize_text(place.get("category", ""))
+    region = normalize_text(place.get("region", ""))
+    district = normalize_text(place.get("district", ""))
+    category = normalize_text(place.get("category", ""))
     distance = normalize_text(place.get("distance", ""))
     description = normalize_text(place.get("description", ""))
-    tags = place.get("_tags_norm") or " ".join(normalize_text(t) for t in place.get("tags", []))
-    aliases = place.get("_aliases_norm") or " ".join(normalize_text(t) for t in place.get("aliases", []))
+    tags = " ".join(normalize_text(t) for t in place.get("tags", []))
+    aliases = " ".join(normalize_text(t) for t in place.get("aliases", []))
     search_blob = place.get("search_blob", "")
 
     score = 0.0
@@ -1234,12 +1091,12 @@ def place_search_score(query: str, place: Dict[str, Any]) -> float:
         if alias_norm and alias_norm in q:
             score += 110
 
-    q_tokens = list(q_tokens_tuple)
-    name_tokens = set(place.get("_name_tokens") or tokenize(name))
-    region_tokens = set(place.get("_region_tokens") or tokenize(region))
-    district_tokens = set(place.get("_district_tokens") or tokenize(district))
-    tag_tokens = set(place.get("_tag_tokens") or tokenize(tags))
-    category_tokens = set(place.get("_category_tokens") or tokenize(category))
+    q_tokens = tokenize(q)
+    name_tokens = set(tokenize(name))
+    region_tokens = set(tokenize(region))
+    district_tokens = set(tokenize(district))
+    tag_tokens = set(tokenize(tags))
+    category_tokens = set(tokenize(category))
 
     for token in q_tokens:
         if token in name_tokens:
@@ -1261,20 +1118,20 @@ def place_search_score(query: str, place: Dict[str, Any]) -> float:
         if token in search_blob:
             score += 3
 
-    if len(q_tokens) <= 3 and (score < 55 or len(q_tokens) <= 2):
+    if len(q_tokens) <= 5:
         query_without_noise = " ".join(q_tokens)
         ratio = fuzzy_ratio(query_without_noise, name)
         if ratio >= 0.70:
             score += ratio * 80
 
-    moods = list(moods_tuple)
+    moods = extract_moods(query)
     for mood in moods:
         mood_words = MOOD_KEYWORDS.get(mood, [])
         text_blob = f"{name} {region} {district} {category} {tags} {description}"
         if any(normalize_text(w) in text_blob for w in mood_words):
             score += 30
 
-    districts = list(districts_tuple)
+    districts = extract_districts(query)
     for district_name in districts:
         d = normalize_text(district_name)
         if d in district or d in region or d in distance or d in description or d in tags:
@@ -4180,7 +4037,7 @@ def build_chat_result(
 
 PUTER_AGENT_ENABLED = os.getenv("PUTER_AGENT_ENABLED", "true").lower() in ["1", "true", "yes", "on"]
 PUTER_AGENT_MODEL = os.getenv("PUTER_AGENT_MODEL", "openai/gpt-5.6-luna")
-PUTER_AGENT_MAX_TOOL_ROUNDS = max(1, min(8, int(os.getenv("PUTER_AGENT_MAX_TOOL_ROUNDS", "5"))))
+PUTER_AGENT_MAX_TOOL_ROUNDS = max(1, min(6, int(os.getenv("PUTER_AGENT_MAX_TOOL_ROUNDS", "4"))))
 PUTER_AGENT_CONTEXT_LIMIT = max(3, min(20, int(os.getenv("PUTER_AGENT_CONTEXT_LIMIT", "10"))))
 V4_SEARCH_CANDIDATE_LIMIT = max(100, min(5000, int(os.getenv("V4_SEARCH_CANDIDATE_LIMIT", "900"))))
 
@@ -4226,13 +4083,6 @@ def v4_fast_search_places(
     if not query:
         return []
 
-    cache_key = stable_key("places", apply_query_aliases(query), limit, min_score, require_image, len(places))
-    cached = V4_SEARCH_CACHE.get(cache_key)
-    if cached is not None:
-        V4_METRICS.cache(True)
-        return [dict(item) for item in cached]
-    V4_METRICS.cache(False)
-
     _v4_build_token_index(places)
     q_tokens = set(tokenize(apply_query_aliases(query)))
 
@@ -4252,16 +4102,8 @@ def v4_fast_search_places(
             candidate_ids.add(exact.get("id"))
 
     if not candidate_ids:
-        # Generic queries ("show me places", "what can I do") should not scan
-        # every document. Use the already indexed ranking instead.
-        q_tokens = set(q_tokens)
-        if not q_tokens:
-            result = get_trending_places(places, limit=limit, require_image=require_image)
-            V4_SEARCH_CACHE.set(cache_key, result)
-            return [dict(item) for item in result]
-        # Fallback for unusual natural-language queries, capped for free-tier
-        # latency. Exact/name/alias matches above still bypass this cap.
-        candidate_pool = places[:V4_SEARCH_CANDIDATE_LIMIT]
+        # Fallback for unusual natural-language queries.
+        candidate_pool = places
     else:
         by_id = PLACES_INDEX.get("by_id", {})
         candidate_pool = [by_id[x] for x in candidate_ids if x in by_id]
@@ -4277,9 +4119,7 @@ def v4_fast_search_places(
             scored.append((score, p))
 
     scored.sort(key=lambda x: x[0], reverse=True)
-    result = [p for _, p in scored[:limit]]
-    V4_SEARCH_CACHE.set(cache_key, result)
-    return [dict(item) for item in result]
+    return [p for _, p in scored[:limit]]
 
 
 # Replace the broad O(N) search for V4 requests. Existing functions use the
@@ -4300,61 +4140,37 @@ def _v4_cache_key(*parts: Any) -> str:
 
 
 def v4_cached_search_osm_places(*args, **kwargs):
-    key = stable_key("osm", args, kwargs)
-    cached = V4_OSM_CACHE_V42.get(key)
-    if cached is not None:
-        V4_METRICS.cache(True)
-        return [dict(item) for item in cached]
-    V4_METRICS.cache(False)
+    key = _v4_cache_key(args, kwargs)
+    now = time.time()
+    cached = V4_OSM_CACHE.get(key)
+    if cached and now - cached[0] < V4_AUX_CACHE_TTL:
+        return cached[1]
     result = _original_search_osm_places_v4(*args, **kwargs)
-    V4_OSM_CACHE_V42.set(key, result)
-    return [dict(item) for item in result]
-
-
-V4_KNOWLEDGE_COLLECTION_CACHE = TTLCache(maxsize=32, ttl=KNOWLEDGE_CACHE_TTL_SECONDS)
+    V4_OSM_CACHE[key] = (now, result)
+    if len(V4_OSM_CACHE) > 300:
+        oldest = sorted(V4_OSM_CACHE.items(), key=lambda kv: kv[1][0])[:80]
+        for k, _ in oldest:
+            V4_OSM_CACHE.pop(k, None)
+    return result
 
 
 def v4_cached_search_knowledge(message: str, intent: str, limit: int = 5):
-    collection = KNOWLEDGE_COLLECTIONS.get(intent)
-    if not collection or db is None:
-        return []
+    key = _v4_cache_key(message, intent, limit)
+    now = time.time()
+    cached = V4_KNOWLEDGE_CACHE.get(key)
+    if cached and now - cached[0] < V4_AUX_CACHE_TTL:
+        return cached[1]
+    result = _original_search_knowledge_v4(message, intent, limit)
+    V4_KNOWLEDGE_CACHE[key] = (now, result)
+    if len(V4_KNOWLEDGE_CACHE) > 300:
+        oldest = sorted(V4_KNOWLEDGE_CACHE.items(), key=lambda kv: kv[1][0])[:80]
+        for k, _ in oldest:
+            V4_KNOWLEDGE_CACHE.pop(k, None)
+    return result
 
-    cache_key = stable_key("knowledge", message, intent, limit)
-    cached = V4_KNOWLEDGE_CACHE_V42.get(cache_key)
-    if cached is not None:
-        V4_METRICS.cache(True)
-        return [dict(item) for item in cached]
-    V4_METRICS.cache(False)
 
-    docs_key = stable_key("knowledge_docs", collection)
-    docs = V4_KNOWLEDGE_COLLECTION_CACHE.get(docs_key)
-    if docs is None:
-        try:
-            loaded = []
-            # Keep the collection bounded; knowledge collections in this app
-            # are intentionally curated. This avoids a Firestore read on every
-            # user message.
-            for doc in db.collection(collection).limit(2500).stream():
-                loaded.append(normalize_knowledge_doc(doc.id, doc.to_dict() or {}, intent))
-            docs = loaded
-            V4_KNOWLEDGE_COLLECTION_CACHE.set(docs_key, docs)
-        except Exception as exc:
-            debug_log("V4.2 knowledge collection load failed", {
-                "collection": collection, "error": str(exc)
-            })
-            return []
-
-    scored = []
-    for item in docs:
-        score = knowledge_score(message, item)
-        if score >= 5:
-            row = dict(item)
-            row["_score"] = round(score, 2)
-            scored.append(row)
-    scored.sort(key=lambda x: x.get("_score", 0), reverse=True)
-    result = scored[:max(1, min(8, int(limit or 5)))]
-    V4_KNOWLEDGE_CACHE_V42.set(cache_key, result)
-    return [dict(item) for item in result]
+search_osm_places = v4_cached_search_osm_places
+search_knowledge = v4_cached_search_knowledge
 
 
 def v4_sanitize_place(place: Dict[str, Any], description: bool = True) -> Dict[str, Any]:
@@ -4419,10 +4235,6 @@ You have access to a private application backend containing 18,000+ Kerala
 places plus structured Kerala knowledge, OpenStreetMap service data and live
 web search.
 
-The backend includes a deterministic Octopus Intelligence Engine for intent,
-entity, freshness, location and tool routing. This is part of Octapus AI's
-application intelligence; Puter supplies the language-model reasoning layer.
-
 Use tools instead of guessing.
 
 CORE RULES
@@ -4439,8 +4251,6 @@ CORE RULES
 - Prefer private Octapus AI database information when it is relevant and
   available.
 - Use live search when information is time-sensitive or needs verification.
-- When web evidence is available, prefer official government/railway/tourism
-  sources and clearly dated sources for current claims.
 - Never pretend that you searched the web or database if you did not.
 - Never invent opening hours, prices, ratings, distances, addresses,
   availability or other factual details.
@@ -4495,22 +4305,7 @@ Focus especially on:
 - emergency information
 
 TOOL USAGE
-Use the available tools intelligently. The backend also provides an intent
-engine and a research plan. Treat `autoTriggers`, `plannedTools`, freshness,
-and entity constraints as strong routing hints.
-
-AUTO-TRIGGER PRINCIPLE
-- For a simple place request, search the private place database first.
-- For a nearby request, use the nearby/service tool when coordinates exist.
-- For current/open-now/news/weather/status requests, use a current tool.
-- For route/distance requests, use travel_info.
-- For Kerala knowledge, writers, books, history, culture, festivals, food,
-  education, government services and emergencies, use search_knowledge.
-- For ambiguous or multi-part requests, use analyze_query before guessing.
-- For comparisons, use compare_places when named places can be resolved.
-- Do not call the same expensive tool twice if the context already contains
-  sufficient evidence.
-- Do not expose the routing engine, confidence scores, cache, or tool names.
+Use the available tools intelligently.
 
 search_places:
 Use for Kerala destinations, attractions, places and recommendations.
@@ -4521,9 +4316,7 @@ about a selected place is needed.
 
 search_services:
 Use for practical nearby services such as food, accommodation, health,
-transport, emergency services, money/ATMs, fuel, shopping, worship and
-education. If user coordinates are available, pass them to the tool so
-results can be ranked by actual distance.
+transport, emergency services, money/ATMs and fuel.
 
 live_search:
 Use for current, changing or time-sensitive information such as current
@@ -4627,7 +4420,7 @@ def build_puter_tool_specs() -> List[Dict[str, Any]]:
                     "type": "object",
                     "properties": {
                         "query": {"type": "string"},
-                        "category": {"type": "string", "enum": ["food", "osm_stay", "osm_health", "osm_transport", "osm_emergency", "osm_money", "osm_fuel", "osm_shopping", "osm_worship", "osm_education"]},
+                        "category": {"type": "string", "enum": ["food", "osm_stay", "osm_health", "osm_transport", "osm_emergency", "osm_money", "osm_fuel"]},
                         "limit": {"type": "integer", "minimum": 1, "maximum": 12},
                         "lat": {"type": "number"},
                         "lng": {"type": "number"}
@@ -4688,40 +4481,6 @@ def build_puter_tool_specs() -> List[Dict[str, Any]]:
         }
     ]
     tools.extend([
-        {
-            "type": "function",
-            "function": {
-                "name": "analyze_query",
-                "description": "Use Octopus AI's deterministic intent engine when the request is ambiguous or multi-part. It extracts intent, constraints, freshness, location needs and recommended tools. Do not expose internal scores.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "message": {"type": "string"},
-                        "history": {"type": "array"},
-                        "location": {"type": "object"}
-                    },
-                    "required": ["message"],
-                },
-                "strict": True,
-            },
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "compare_places",
-                "description": "Resolve two or more named Kerala places from the private database and return structured comparison data.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "places": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 5}
-                    },
-                    "required": ["places"],
-                },
-                "strict": True,
-            },
-        },
-    ])
-    tools.extend([
         {"type": "function", "function": {"name": "get_weather", "description": "Get normalized current weather and a short forecast from the configured weather provider. Use for weather, rain, temperature, humidity, wind, or travel-weather questions; do not infer weather from stable place data.", "parameters": {"type": "object", "properties": {"location": {"type": "string"}, "latitude": {"type": "number"}, "longitude": {"type": "number"}, "forecast_days": {"type": "integer", "minimum": 1, "maximum": 7}}, "strict": True}}},
         {"type": "function", "function": {"name": "search_news", "description": "Search current web reporting for latest or breaking news. Inspect publication/source fields and do not present an undated result as current news.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 8}, "location": {"type": "string"}}, "required": ["query"], "strict": True}}},
         {"type": "function", "function": {"name": "search_events", "description": "Discover current events using web evidence. Only state dates, times, prices, or availability when they are returned by evidence.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "location": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 8}}, "required": ["query"], "strict": True}}},
@@ -4770,15 +4529,8 @@ def v4_tool_services(args: Dict[str, Any]) -> Dict[str, Any]:
 def v4_tool_live_search(args: Dict[str, Any]) -> Dict[str, Any]:
     q = build_live_search_query(safe_text(args.get("query")))
     limit = max(1, min(5, safe_int(args.get("limit"), 3)))
-    key = stable_key("live", q, limit)
-    cached = V4_LIVE_CACHE.get(key)
-    if cached is not None:
-        V4_METRICS.cache(True)
-        return cached
-    V4_METRICS.cache(False)
     result = tavily_live_search(q, max_results=limit)
     result["evidence"] = normalize_web_results(result.get("results", []))
-    V4_LIVE_CACHE.set(key, result)
     return result
 
 
@@ -4788,17 +4540,7 @@ def v4_tool_weather(args: Dict[str, Any]) -> Dict[str, Any]:
         if not valid_coordinates(lat, lng):
             return {"ok": False, "error_code": "invalid_location", "message": "A valid location is required for weather lookup.", "retryable": False}
         lat, lng = float(lat), float(lng)
-    location = safe_text(args.get("location"))
-    forecast_days = safe_int(args.get("forecast_days"), 3)
-    key = stable_key("weather", location, lat, lng, forecast_days)
-    cached = V4_WEATHER_CACHE.get(key)
-    if cached is not None:
-        V4_METRICS.cache(True)
-        return cached
-    V4_METRICS.cache(False)
-    result = get_weather(latitude=lat, longitude=lng, location=location or None, forecast_days=forecast_days)
-    V4_WEATHER_CACHE.set(key, result)
-    return result
+    return get_weather(latitude=lat, longitude=lng, location=safe_text(args.get("location")) or None, forecast_days=safe_int(args.get("forecast_days"), 3))
 
 
 def v4_tool_news(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -4815,19 +4557,11 @@ def v4_tool_events(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def v4_tool_travel(args: Dict[str, Any]) -> Dict[str, Any]:
+    places = load_places_from_firestore()
     origin = safe_text(args.get("origin"))
     destination = safe_text(args.get("destination"))
-    key = stable_key("travel", origin, destination)
-    cached = V4_TRAVEL_CACHE.get(key)
-    if cached is not None:
-        V4_METRICS.cache(True)
-        return cached
-    V4_METRICS.cache(False)
-    places = load_places_from_firestore()
     info, parsed_origin, parsed_destination = get_travel_info(f"from {origin} to {destination}", places)
-    result = {"origin": parsed_origin or origin, "destination": parsed_destination or destination, "travelInfo": info}
-    V4_TRAVEL_CACHE.set(key, result)
-    return result
+    return {"origin": parsed_origin or origin, "destination": parsed_destination or destination, "travelInfo": info}
 
 
 def v4_tool_knowledge(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -4845,47 +4579,6 @@ def v4_tool_knowledge(args: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def v4_tool_analyze_query(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Expose the deterministic Octopus intent engine to the agent."""
-    message = safe_text(args.get("message"))
-    if not message:
-        return {"ok": False, "error_code": "empty_message", "message": "Message is required."}
-    intent = intelligence_detect(message, args.get("history") or [])
-    location = parse_location(args.get("location") or {})
-    research = build_research_plan(message, intent, location.as_dict())
-    return {
-        "ok": True,
-        "intent": intent,
-        "plan": research,
-        "instruction": "Use the plan as a routing hint. Do not expose internal scoring to the user.",
-    }
-
-
-def v4_tool_compare_places(args: Dict[str, Any]) -> Dict[str, Any]:
-    names = args.get("places") or []
-    if not isinstance(names, list):
-        names = []
-    names = [safe_text(x) for x in names if safe_text(x)][:5]
-    if len(names) < 2:
-        return {"ok": False, "error_code": "need_two_places", "places": []}
-    places = load_places_from_firestore()
-    found = []
-    missing = []
-    for name in names:
-        place = find_place_by_name(name, places, min_score=25)
-        if place:
-            found.append(v4_sanitize_place(place, True))
-        else:
-            missing.append(name)
-    return {
-        "ok": len(found) >= 2,
-        "count": len(found),
-        "places": found,
-        "missing": missing,
-        "comparisonFields": ["name", "region", "category", "rating", "bestTime", "description"],
-    }
-
-
 def v4_execute_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     handlers = {
         "search_places": v4_tool_search_places,
@@ -4898,18 +4591,13 @@ def v4_execute_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         "search_nearby": v4_tool_services,
         "travel_info": v4_tool_travel,
         "search_knowledge": v4_tool_knowledge,
-        "analyze_query": v4_tool_analyze_query,
-        "compare_places": v4_tool_compare_places,
     }
     handler = handlers.get(name)
     if not handler:
         return {"ok": False, "error_code": "unknown_tool", "message": "That tool is not available.", "retryable": False}
-    V4_METRICS.tool()
     try:
-        with V4_METRICS.timer("tool:" + name):
-            return handler(args)
+        return handler(args)
     except Exception as exc:
-        V4_METRICS.request(ok=False)
         debug_log("V4 tool failed", {"tool": name, "error": str(exc)})
         return {"ok": False, "error_code": "tool_failed", "message": "The requested information is temporarily unavailable.", "retryable": True}
 
@@ -4924,112 +4612,33 @@ def build_puter_agent_context(
     user_location_text: str = "",
     location_payload: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """
-    Fast agent bootstrap.
-
-    The backend supplies routing hints and a small amount of high-value local
-    evidence. Puter remains the final reasoning layer and can call the tools for
-    deeper retrieval. Expensive independent work is parallelized.
-    """
-    started = time.perf_counter()
-    location = parse_location(
-        location_payload or {
-            "userLat": user_lat,
-            "userLng": user_lng,
-            "userLocationText": user_location_text,
-        }
-    )
+    """Fast initial context. The browser agent can then call tools for deeper retrieval."""
+    places = load_places_from_firestore()
+    location = parse_location(location_payload or {"userLat": user_lat, "userLng": user_lng, "userLocationText": user_location_text})
     intelligent_intent = intelligence_detect(message, history)
-    V4_METRICS.intent(intelligent_intent.get("sub_intent", "unknown"))
     plan = build_research_plan(message, intelligent_intent, location.as_dict())
-    legacy_master_intent = detect_master_intent(message)
+    master_intent = detect_master_intent(message)
     intent = detect_intent(message)
-    routed_sub_intent = intelligent_intent.get("sub_intent", "general_kerala")
-    knowledge_intents = set(KNOWLEDGE_COLLECTIONS.keys())
-    if routed_sub_intent in OSM_TYPE_MAP:
-        master_intent = routed_sub_intent
-    elif intelligent_intent.get("category_hint") in OSM_TYPE_MAP and intelligent_intent.get("requires_location"):
-        master_intent = intelligent_intent.get("category_hint")
-    elif routed_sub_intent in knowledge_intents:
-        master_intent = routed_sub_intent
-    elif legacy_master_intent != "general_kerala":
-        master_intent = legacy_master_intent
+    selected = get_place_by_id(current_place_id) if current_place_id else None
+    matches = []
+
+    if master_intent in ("writer", "book", "history", "culture", "festival", "government_service", "food_knowledge", "education", "emergency", "general_kerala"):
+        knowledge = search_knowledge(message, master_intent, limit=5)
+        matches = [build_knowledge_card(x) for x in knowledge]
+    elif master_intent in OSM_TYPE_MAP and location.available:
+        osm = search_osm_places(message, master_intent, limit=8, user_lat=location.latitude, user_lng=location.longitude)
+        matches = [build_place_card(x, True, True) for x in osm]
     else:
-        master_intent = routed_sub_intent
-    selected = None
+        found = search_places(message, places, limit=PUTER_AGENT_CONTEXT_LIMIT, min_score=3)
+        matches = [v4_sanitize_place(x, True) for x in found]
 
-    needs_places = bool(current_place_id) or master_intent not in (
-        "weather_current", "latest_news", "events_today", "train_status",
-        "traffic", "location",
-        "writer", "book", "history", "culture", "festival",
-        "government_service", "food_knowledge", "education", "emergency",
-    )
-    places = load_places_from_firestore() if needs_places else []
-    if current_place_id and places:
-        selected = PLACES_INDEX.get("by_id", {}).get(current_place_id)
-    matches: List[Dict[str, Any]] = []
     live = None
-
-    # Local retrieval and web retrieval are independent once the place cache is
-    # warm. Run them together to reduce first-token latency.
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        local_future = None
-        live_future = None
-
-        if master_intent in (
-            "writer", "book", "history", "culture", "festival",
-            "government_service", "food_knowledge", "education",
-            "emergency", "general_kerala",
-        ):
-            local_future = pool.submit(search_knowledge, message, master_intent, 5)
-        elif master_intent in OSM_TYPE_MAP and location.available:
-            local_future = pool.submit(
-                search_osm_places,
-                message,
-                master_intent,
-                8,
-                location.latitude,
-                location.longitude,
-            )
-        else:
-            local_future = pool.submit(
-                search_places, message, places, PUTER_AGENT_CONTEXT_LIMIT, 3
-            )
-
-        auto_web = os.getenv("AUTO_CONTEXT_WEB", "true").lower() in ["1", "true", "yes", "on"]
-        if auto_web and intelligent_intent.get("requires_web") and master_intent not in OSM_TYPE_MAP:
-            live_future = pool.submit(
-                v4_tool_live_search,
-                {"query": build_live_search_query(message, location.as_dict(), intent), "limit": 3},
-            )
-
-        try:
-            local_result = local_future.result(timeout=8)
-        except Exception as exc:
-            debug_log("Initial local retrieval failed", str(exc))
-            local_result = []
-
-        if master_intent in (
-            "writer", "book", "history", "culture", "festival",
-            "government_service", "food_knowledge", "education",
-            "emergency", "general_kerala",
-        ):
-            matches = [build_knowledge_card(x) for x in local_result]
-        elif master_intent in OSM_TYPE_MAP and location.available:
-            matches = [build_place_card(x, True, True) for x in local_result]
-        else:
-            matches = [v4_sanitize_place(x, True) for x in local_result]
-
-        if live_future is not None:
-            try:
-                live = live_future.result(timeout=8)
-                live["evidence"] = live.get("evidence") or normalize_web_results(live.get("results", []))
-            except Exception as exc:
-                debug_log("Initial live retrieval failed", str(exc))
-                live = None
+    if should_use_live_search(message) and master_intent not in OSM_TYPE_MAP:
+        live = tavily_live_search(build_live_search_query(message, location.as_dict(), intent), max_results=3)
+        live["evidence"] = normalize_web_results(live.get("results", []))
 
     return {
-        "version": "5.2",
+        "version": "5",
         "mode": "puter_user_pays_agent",
         "aiProvider": "Puter.js",
         "model": PUTER_AGENT_MODEL,
@@ -5038,9 +4647,6 @@ def build_puter_agent_context(
         "intelligence": intelligent_intent,
         "freshness": plan["freshness"],
         "plannedTools": plan["steps"],
-        "autoTriggers": intelligent_intent.get("recommended_tools", []),
-        "triggerReasons": intelligent_intent.get("trigger_reasons", {}),
-        "candidateIntents": intelligent_intent.get("candidate_intents", []),
         "message": message,
         "history": v4_history_compact(history),
         "currentPlace": v4_sanitize_place(selected, True) if selected else None,
@@ -5050,26 +4656,14 @@ def build_puter_agent_context(
         "initialResults": matches,
         "live": live,
         "evidence": (live or {}).get("evidence", []),
-        "sources": [
-            {
-                "title": e["title"],
-                "url": e["url"],
-                "source": e["publisher"],
-                "publishedAt": e["published_at"],
-                "retrievedAt": e["retrieved_at"],
-            }
-            for e in (live or {}).get("evidence", [])
-        ],
+        "sources": [{"title": e["title"], "url": e["url"], "source": e["publisher"], "publishedAt": e["published_at"], "retrievedAt": e["retrieved_at"]} for e in (live or {}).get("evidence", [])],
         "toolCalling": True,
         "toolRoundLimit": PUTER_AGENT_MAX_TOOL_ROUNDS,
         "systemPrompt": build_puter_agent_system_prompt(),
         "tools": build_puter_tool_specs(),
         "placeCount": len(places),
-        "imageCount": len(PLACES_INDEX.get("with_images", [])),
-        "cacheSource": PLACES_CACHE_SOURCE,
-        "cacheLoadSeconds": PLACES_CACHE_LOAD_SECONDS,
+        "imageCount": len([p for p in places if has_image_url(p)]),
         "timestamp": now_iso(),
-        "latencyMs": round((time.perf_counter() - started) * 1000, 1),
         "requestId": stable_hash(message + str(time.time())),
     }
 
@@ -5116,35 +4710,20 @@ def v4_agent_tool_api():
 
 @app.route("/api/agent/tools", methods=["GET"])
 def v4_agent_tools_api():
-    return jsonify({"version": "v4.2", "model": PUTER_AGENT_MODEL, "tools": build_puter_tool_specs()})
+    return jsonify({"version": "v4", "model": PUTER_AGENT_MODEL, "tools": build_puter_tool_specs()})
 
 
 @app.route("/api/agent/health", methods=["GET"])
 def v4_agent_health_api():
     return jsonify({
         "status": "ok",
-        "version": "5.2",
-        "release": "v4.2-performance",
+        "version": "5",
         "puterAgentEnabled": PUTER_AGENT_ENABLED,
         "puterModel": PUTER_AGENT_MODEL,
         "toolCalling": True,
         "placeCount": len(PLACES_CACHE),
         "cacheLoaded": bool(PLACES_CACHE),
-        "cacheLoading": PLACES_CACHE_LOADING,
-        "cacheSource": PLACES_CACHE_SOURCE,
-        "cacheAgeSeconds": round(time.time() - PLACES_CACHE_TIME, 2) if PLACES_CACHE_TIME else None,
-        "cacheLoadSeconds": PLACES_CACHE_LOAD_SECONDS,
-        "cacheDegraded": bool(PLACES_CACHE) and len(PLACES_CACHE) < MIN_EXPECTED_PLACE_COUNT,
-        "cacheError": PLACES_CACHE_ERROR or None,
-        "indexReady": bool(globals().get("V4_PLACE_TOKEN_INDEX_READY", False)),
-        "services": {
-            "firestore": bool(db),
-            "tavily": bool(os.getenv("TAVILY_API_KEY")),
-            "google_maps": bool(GOOGLE_MAPS_API_KEY),
-            "weather": bool(os.getenv("WEATHER_API_URL") and os.getenv("WEATHER_API_KEY")),
-            "puter": PUTER_AGENT_ENABLED,
-            "local_cache": os.path.exists(LOCAL_CACHE_FILE),
-        },
+        "services": {"firestore": bool(db), "tavily": bool(os.getenv("TAVILY_API_KEY")), "google_maps": bool(GOOGLE_MAPS_API_KEY), "weather": bool(os.getenv("WEATHER_API_URL") and os.getenv("WEATHER_API_KEY")), "puter": PUTER_AGENT_ENABLED, "local_cache": os.path.exists(LOCAL_CACHE_FILE)},
     })
 
 
@@ -5169,42 +4748,27 @@ def home():
 @app.route("/api/health", methods=["GET"])
 def health_api():
     cache_age = round(time.time() - PLACES_CACHE_TIME, 2) if PLACES_CACHE_TIME else None
+
+    osm_sample_available = False
+    try:
+        osm_sample_available = bool(db) and len(list(db.collection(OSM_COLLECTION).limit(1).stream())) > 0
+    except Exception:
+        osm_sample_available = False
+
     return jsonify({
         "status": "ok",
         "name": APP_NAME,
-        "version": "v4.2",
         "time": now_iso(),
         "cacheLoaded": bool(PLACES_CACHE),
         "cacheAgeSeconds": cache_age,
         "placeCount": len(PLACES_CACHE),
-        "imageCount": len(PLACES_INDEX.get("with_images", [])),
-        "cacheSource": PLACES_CACHE_SOURCE,
-        "cacheLoadSeconds": PLACES_CACHE_LOAD_SECONDS,
-        "cacheDegraded": bool(PLACES_CACHE) and len(PLACES_CACHE) < MIN_EXPECTED_PLACE_COUNT,
+        "imageCount": len([p for p in PLACES_CACHE if has_image_url(p)]),
         "groqConfigured": bool(groq_client),
         "googleMapsConfigured": bool(GOOGLE_MAPS_API_KEY),
         "osmCollection": OSM_COLLECTION,
+        "osmSampleAvailable": osm_sample_available,
         "puterAgentEnabled": PUTER_AGENT_ENABLED,
         "puterModel": PUTER_AGENT_MODEL,
-        "metrics": V4_METRICS.snapshot(),
-    })
-
-
-@app.route("/api/metrics", methods=["GET"])
-def metrics_api():
-    if os.getenv("ENABLE_METRICS_ENDPOINT", "true").lower() not in ["1", "true", "yes", "on"]:
-        return jsonify({"error": "disabled"}), 404
-    return jsonify({
-        "version": "v4.2",
-        "metrics": V4_METRICS.snapshot(),
-        "caches": {
-            "placesSearch": V4_SEARCH_CACHE.stats(),
-            "live": V4_LIVE_CACHE.stats(),
-            "weather": V4_WEATHER_CACHE.stats(),
-            "travel": V4_TRAVEL_CACHE.stats(),
-            "knowledge": V4_KNOWLEDGE_CACHE_V42.stats(),
-            "osm": V4_OSM_CACHE_V42.stats(),
-        },
     })
 
 @app.route("/api/chat", methods=["POST"])
@@ -5585,28 +5149,6 @@ def debug_intent_api():
 # if data.ui.showCards: show matchedPlaces cards
 # if data.ui.showImages is false: do not render imageUrl inside cards
 # ============================================================
-
-
-# ============================================================
-# V4.2 BACKGROUND WARM-UP
-# ============================================================
-
-def _v42_warm_places():
-    if not PREWARM_PLACES:
-        return
-    try:
-        load_places_from_firestore()
-        debug_log("V4.2 background place warm-up complete", {
-            "count": len(PLACES_CACHE),
-            "source": PLACES_CACHE_SOURCE,
-            "seconds": PLACES_CACHE_LOAD_SECONDS,
-        })
-    except Exception as exc:
-        debug_log("V4.2 background place warm-up failed", str(exc))
-
-
-if PREWARM_PLACES:
-    threading.Thread(target=_v42_warm_places, name="octopus-place-warmup", daemon=True).start()
 
 
 # ============================================================
