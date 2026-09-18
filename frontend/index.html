@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07111f">
+  <meta name="description" content="Octapus AI — Kerala intelligence powered by your private data and Puter AI.">
+  <title>Octapus AI — Kerala Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <script src="https://js.puter.com/v2/"></script>
+  <style>
+    :root{
+      --bg:#07111f; --bg2:#0b1728; --panel:rgba(14,28,47,.76); --panel2:#10233b;
+      --line:rgba(174,205,235,.13); --text:#edf5ff; --muted:#9db0c7; --accent:#61e5b2;
+      --accent2:#70a7ff; --danger:#ff8f8f; --shadow:0 24px 70px rgba(0,0,0,.28);
+      --radius:22px;
+    }
+    *{box-sizing:border-box} html,body{margin:0;min-height:100%;background:radial-gradient(1200px 700px at 10% -10%,#123c55 0%,transparent 55%),radial-gradient(900px 600px at 100% 0%,#182d58 0%,transparent 55%),var(--bg);color:var(--text);font-family:"DM Sans",system-ui,sans-serif}
+    body{overflow-x:hidden}.app{min-height:100vh;display:grid;grid-template-columns:280px 1fr}
+    .sidebar{border-right:1px solid var(--line);background:rgba(4,13,25,.72);backdrop-filter:blur(22px);padding:22px 18px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column}
+    .brand{display:flex;gap:11px;align-items:center;padding:8px 8px 24px}.logo{width:40px;height:40px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#50b8ff);color:#062016;font-weight:800;box-shadow:0 10px 35px rgba(97,229,178,.22)}
+    .brand strong{font:700 19px "Space Grotesk"}.brand small{display:block;color:var(--muted);font-size:11px;margin-top:1px}
+    .newchat{width:100%;border:1px solid var(--line);background:linear-gradient(135deg,rgba(97,229,178,.12),rgba(112,167,255,.08));color:var(--text);padding:12px 14px;border-radius:14px;cursor:pointer;font-weight:700}
+    .side-section{margin-top:25px}.side-title{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:#6f849c;padding:0 9px 8px}.history{display:grid;gap:5px}.history button{border:0;background:transparent;color:#b9c8d9;text-align:left;padding:10px;border-radius:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}.history button:hover{background:rgba(255,255,255,.05);color:white}
+    .side-bottom{margin-top:auto}.status-card{border:1px solid var(--line);border-radius:16px;padding:13px;background:rgba(255,255,255,.025)}.status-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;margin:8px 0}.dot{width:8px;height:8px;border-radius:50%;background:#65788e;display:inline-block;margin-right:7px}.dot.ok{background:var(--accent);box-shadow:0 0 12px rgba(97,229,178,.7)}.muted{color:var(--muted)}
+    main{min-width:0;display:flex;flex-direction:column;height:100vh}.topbar{height:68px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 26px;background:rgba(7,17,31,.55);backdrop-filter:blur(18px);position:sticky;top:0;z-index:5}.top-title{font:600 15px "Space Grotesk"}.top-actions{display:flex;gap:9px;align-items:center}.pill{font-size:11px;color:#b7c8dc;border:1px solid var(--line);padding:7px 10px;border-radius:99px;background:rgba(255,255,255,.03)}.signin{border:1px solid rgba(97,229,178,.35);background:rgba(97,229,178,.08);color:#bff9df;padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:700}
+    .chat{flex:1;overflow:auto;padding:34px max(24px,calc((100vw - 920px)/2));scroll-behavior:smooth}.hero{max-width:920px;margin:8vh auto 0}.eyebrow{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:99px;padding:7px 11px;color:#b6c8db;font-size:11px}.eyebrow i{width:7px;height:7px;border-radius:50%;background:var(--accent)}h1{font:700 clamp(42px,6vw,72px)/.98 "Space Grotesk";letter-spacing:-.055em;margin:20px 0 15px;max-width:850px}h1 span{background:linear-gradient(90deg,#fff,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}.hero p{color:var(--muted);font-size:16px;line-height:1.7;max-width:680px}.suggestions{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}.chip{border:1px solid var(--line);background:rgba(255,255,255,.035);color:#c9d6e4;padding:9px 12px;border-radius:12px;cursor:pointer}.chip:hover{border-color:rgba(97,229,178,.35);background:rgba(97,229,178,.06)}
+    .messages{max-width:920px;margin:30px auto;display:grid;gap:20px}.msg{display:flex;gap:12px;animation:up .22s ease}.msg.user{justify-content:flex-end}.avatar{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:#12243a;border:1px solid var(--line);font-size:12px;flex:0 0 32px}.msg.user .avatar{background:linear-gradient(135deg,#2c6070,#315c9b)}.bubble{max-width:min(760px,86%);line-height:1.68;font-size:15px}.msg.user .bubble{background:rgba(255,255,255,.06);border:1px solid var(--line);padding:12px 15px;border-radius:18px 18px 5px 18px}.assistant-text{white-space:normal}.assistant-text p{margin:.25em 0 .9em}.assistant-text ul,.assistant-text ol{padding-left:22px}.assistant-text strong{color:#fff}.typing{display:flex;gap:5px;padding:12px 2px}.typing b{width:6px;height:6px;border-radius:50%;background:#8295aa;animation:b 1s infinite}.typing b:nth-child(2){animation-delay:.15s}.typing b:nth-child(3){animation-delay:.3s}@keyframes b{50%{opacity:.25;transform:translateY(-3px)}}@keyframes up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:15px}.card{border:1px solid var(--line);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border-radius:16px;overflow:hidden;cursor:pointer}.card img{width:100%;height:115px;object-fit:cover;display:block}.card-body{padding:12px}.card h3{margin:0 0 5px;font:600 15px "Space Grotesk"}.card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;color:#9eb3ca;font-size:10px}
+    .composer-wrap{padding:16px 24px 22px;background:linear-gradient(transparent,var(--bg) 28%);position:sticky;bottom:0}.composer{max-width:920px;margin:auto;border:1px solid rgba(180,211,238,.18);background:rgba(13,28,47,.92);box-shadow:var(--shadow);border-radius:20px;padding:10px;display:flex;align-items:flex-end;gap:8px}.composer textarea{flex:1;resize:none;border:0;outline:0;background:transparent;color:white;font:15px/1.5 "DM Sans";padding:9px 8px;min-height:42px;max-height:150px}.composer textarea::placeholder{color:#6f839a}.send{width:44px;height:44px;border:0;border-radius:14px;background:linear-gradient(135deg,var(--accent),#54c8ff);color:#061b17;font-weight:900;cursor:pointer}.send:disabled{opacity:.4;cursor:wait}.loc{width:38px;height:38px;border:1px solid var(--line);background:transparent;color:#9db0c7;border-radius:12px;cursor:pointer}.composer-note{max-width:920px;margin:8px auto 0;color:#5e7289;font-size:10px;text-align:center}
+    .toast{position:fixed;right:20px;bottom:20px;background:#13263d;border:1px solid var(--line);padding:12px 14px;border-radius:12px;box-shadow:var(--shadow);display:none;z-index:20;font-size:13px}.toast.show{display:block}.mobile-menu{display:none}
+    @media(max-width:800px){.app{grid-template-columns:1fr}.sidebar{display:none}.mobile-menu{display:block}.topbar{padding:0 14px}.chat{padding:22px 15px}.hero{margin-top:8vh}.hero p{font-size:14px}h1{font-size:46px}.composer-wrap{padding:10px 12px 15px}.pill{display:none}.bubble{max-width:91%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">O</div><div><strong>Octapus AI</strong><small>Kerala Intelligence</small></div></div>
+    <button class="newchat" id="newChat">＋ New conversation</button>
+    <div class="side-section"><div class="side-title">Recent</div><div class="history" id="history"></div></div>
+    <div class="side-bottom">
+      <div class="status-card">
+        <div class="status-row"><span><i class="dot" id="apiDot"></i>Backend</span><span id="apiState" class="muted">checking</span></div>
+        <div class="status-row"><span><i class="dot" id="puterDot"></i>Puter AI</span><span id="puterState" class="muted">signed out</span></div>
+        <div class="status-row"><span>Private records</span><span id="placeCount" class="muted">—</span></div>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div class="top-title"><span class="mobile-menu">☰ </span>Octapus AI <span class="muted">/ V4.1</span></div>
+      <div class="top-actions"><span class="pill">18k+ private places</span><span class="pill">User-Pays AI</span><button class="signin" id="signin">Sign in</button></div>
+    </header>
+
+    <section class="chat" id="chat">
+      <div class="hero" id="hero">
+        <span class="eyebrow"><i></i> Private data + Puter intelligence</span>
+        <h1>Ask Kerala.<br><span>Get a useful answer.</span></h1>
+        <p>One assistant for destinations, food, stays, routes, services, culture and current information — grounded in your own 18,000+ record database instead of guessing.</p>
+        <div class="suggestions">
+          <button class="chip">Best places in Munnar for 2 days</button>
+          <button class="chip">Good vegetarian restaurants in Kochi</button>
+          <button class="chip">What can I do in Wayanad this weekend?</button>
+          <button class="chip">Find a hospital near me</button>
+        </div>
+      </div>
+      <div class="messages" id="messages"></div>
+    </section>
+
+    <div class="composer-wrap">
+      <div class="composer">
+        <button class="loc" id="loc" title="Use my location">⌖</button>
+        <textarea id="input" rows="1" placeholder="Ask anything about Kerala…"></textarea>
+        <button class="send" id="send" title="Send">↑</button>
+      </div>
+      <div class="composer-note">Puter powers the AI call. Your private database stays behind your backend.</div>
+    </div>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="/assets/puter-agent.js"></script>
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const input = $("#input"), send = $("#send"), messages = $("#messages"), hero = $("#hero");
+  const apiBase = location.origin;
+  let history = JSON.parse(localStorage.getItem("octapus_history") || "[]");
+  let currentPlaceId = localStorage.getItem("octapus_place") || null;
+  let lastMatchedPlaceIds = JSON.parse(localStorage.getItem("octapus_matches") || "[]");
+  let userLat = 0, userLng = 0, userLocationText = "";
+  let busy = false;
+
+  function toast(text){ const t=$("#toast"); t.textContent=text; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),3000); }
+  function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+  function md(s){
+    let x=esc(s||"");
+    x=x.replace(/```([\s\S]*?)```/g,"<pre style='overflow:auto;padding:12px;background:#07111f;border:1px solid #18304b;border-radius:12px'>$1</pre>");
+    x=x.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>");
+    x=x.replace(/^\s*[-•]\s+(.+)$/gm,"<li>$1</li>").replace(/(<li>[\s\S]*?<\/li>)/g,"<ul>$1</ul>");
+    x=x.replace(/\n\n/g,"</p><p>").replace(/\n/g,"<br>");
+    return "<p>"+x+"</p>";
+  }
+  function addMsg(role,text, cards=[]){
+    hero.style.display="none";
+    const row=document.createElement("div"); row.className="msg "+role;
+    const avatar=document.createElement("div"); avatar.className="avatar"; avatar.textContent=role==="user"?"You":"O";
+    const bubble=document.createElement("div"); bubble.className="bubble";
+    if(role==="user") bubble.textContent=text; else {
+      const body=document.createElement("div"); body.className="assistant-text"; body.innerHTML=md(text); bubble.appendChild(body);
+      if(cards?.length){
+        const grid=document.createElement("div"); grid.className="cards";
+        cards.slice(0,8).forEach(p=>{
+          const c=document.createElement("div"); c.className="card";
+          const img=p.imageUrl||p.image_url||p.image;
+          c.innerHTML=(img?`<img src="${esc(img)}" loading="lazy" onerror="this.style.display='none'">`:"")+`<div class="card-body"><h3>${esc(p.name||p.title||"Place")}</h3><p>${esc(p.shortDescription||p.description||p.district||"")}</p><div class="meta">${p.district?`<span>${esc(p.district)}</span>`:""}${p.rating?`<span>★ ${esc(p.rating)}</span>`:""}</div></div>`;
+          c.onclick=()=>{currentPlaceId=p.id||p.place_id||null; localStorage.setItem("octapus_place",currentPlaceId||""); input.value=`Tell me more about ${p.name||"this place"}`; input.focus();};
+          grid.appendChild(c);
+        }); bubble.appendChild(grid);
+      }
+    }
+    row.append(avatar,bubble); messages.appendChild(row); $("#chat").scrollTop=$("#chat").scrollHeight;
+  }
+  function typing(){
+    const row=document.createElement("div"); row.className="msg assistant"; row.id="typing";
+    row.innerHTML='<div class="avatar">O</div><div class="bubble"><div class="typing"><b></b><b></b><b></b></div></div>';
+    messages.appendChild(row); $("#chat").scrollTop=$("#chat").scrollHeight;
+  }
+  function removeTyping(){ $("#typing")?.remove(); }
+  function save(){ localStorage.setItem("octapus_history",JSON.stringify(history.slice(-12))); localStorage.setItem("octapus_matches",JSON.stringify(lastMatchedPlaceIds.slice(-12))); }
+  function renderHistory(){
+    const box=$("#history"); box.innerHTML="";
+    history.filter(x=>x.role==="user").slice(-7).reverse().forEach(x=>{const b=document.createElement("button");b.textContent=x.content;b.onclick=()=>{input.value=x.content;input.focus()};box.appendChild(b)});
+  }
+  async function health(){
+    try{
+      const r=await fetch(apiBase+"/api/agent/health"); const d=await r.json();
+      $("#apiDot").classList.add("ok"); $("#apiState").textContent="online"; $("#placeCount").textContent=(d.placeCount||0).toLocaleString();
+    }catch(e){$("#apiState").textContent="offline";toast("Backend is not reachable. Start gpt.py.");}
+  }
+  async function signIn(){
+    try{ await OctapusPuterV4.signIn(); $("#puterDot").classList.add("ok"); $("#puterState").textContent="signed in"; $("#signin").textContent="Puter ✓"; toast("Puter signed in."); }
+    catch(e){toast(e.message||"Puter sign-in failed");}
+  }
+  function locate(){
+    if(!navigator.geolocation)return toast("Location is not supported.");
+    navigator.geolocation.getCurrentPosition(pos=>{userLat=pos.coords.latitude;userLng=pos.coords.longitude;userLocationText="Current device location";toast("Location ready for nearby searches.");},()=>toast("Location permission was denied."));
+  }
+  async function ask(){
+    if(busy)return; const q=input.value.trim(); if(!q)return;
+    busy=true;send.disabled=true;addMsg("user",q);input.value="";input.style.height="auto";typing();
+    history.push({role:"user",content:q});
+    try{
+      const result=await OctapusPuterV4.ask({apiBase,message:q,history:history.slice(-8),currentPlaceId,lastMatchedPlaceIds,userLat,userLng,userLocationText});
+      removeTyping();
+      const ctx=result.context||{}; const cards=(ctx.initialResults||[]).filter(x=>x.name||x.title);
+      addMsg("assistant",result.answer||"I couldn't produce an answer.",cards);
+      history.push({role:"assistant",content:result.answer||""});
+      if(cards.length) lastMatchedPlaceIds=cards.map(x=>x.id).filter(Boolean);
+      renderHistory();save();
+      $("#puterDot").classList.add("ok");$("#puterState").textContent="signed in";
+    }catch(e){removeTyping();addMsg("assistant","I couldn't complete that request. "+(e.message||"Please try again."));toast(e.message||"Request failed");}
+    finally{busy=false;send.disabled=false;input.focus();}
+  }
+  $("#signin").onclick=signIn; $("#send").onclick=ask; $("#loc").onclick=locate;
+  $("#newChat").onclick=()=>{history=[];currentPlaceId=null;lastMatchedPlaceIds=[];localStorage.removeItem("octapus_history");localStorage.removeItem("octapus_place");localStorage.removeItem("octapus_matches");messages.innerHTML="";hero.style.display="block";renderHistory();};
+  document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>{input.value=b.textContent;input.focus();});
+  input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask();}});
+  input.addEventListener("input",()=>{input.style.height="auto";input.style.height=Math.min(input.scrollHeight,150)+"px";});
+  renderHistory();health();
+})();
+</script>
+</body>
+</html>
