@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ml">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07130f">
+<title>Octopus AI — കേരളത്തിന്റെ AI</title>
+<script src="https://js.puter.com/v2/"></script>
+<script src="./puter-agent.js"></script>
+<style>
+:root{--bg:#06110d;--panel:#0b1c16;--line:rgba(224,255,241,.11);--text:#f2fff9;--muted:#8fa79c;--mint:#73f2b6;--mint2:#b9ffdb;--blue:#8bb8ff;--warn:#ffd36b;--danger:#ff8f8f;--shadow:0 28px 90px rgba(0,0,0,.38);--side:286px}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:radial-gradient(900px 600px at 5% -10%,rgba(42,146,105,.22),transparent 62%),radial-gradient(900px 650px at 100% 0,rgba(59,103,184,.15),transparent 58%),var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans Malayalam",sans-serif}body{overflow:hidden}button,textarea,select{font:inherit;color:inherit}
+.app{height:100vh;display:grid;grid-template-columns:var(--side) minmax(0,1fr)}aside{height:100vh;padding:18px 15px;border-right:1px solid var(--line);background:rgba(3,13,10,.78);backdrop-filter:blur(24px);display:flex;flex-direction:column;min-width:0}
+.brand{display:flex;align-items:center;gap:11px;padding:3px 8px 18px}.logo{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(145deg,var(--mint),#55b9ff);color:#052018;font-weight:950}.brand b{font-size:17px}.brand small{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.new,.connect{width:100%;padding:11px 13px;border-radius:14px;border:1px solid rgba(115,242,182,.2);background:rgba(115,242,182,.065);cursor:pointer;font-weight:760}.connect{margin-top:7px;background:rgba(139,184,255,.065);border-color:rgba(139,184,255,.18)}.connect.connected{color:var(--mint2);border-color:rgba(115,242,182,.3)}
+.side-section{margin-top:20px;min-height:0}.section-title{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#668077;padding:0 9px 8px}.history{display:grid;gap:3px;overflow:auto;max-height:44vh}
+.chat-item{width:100%;border:1px solid transparent;background:transparent;text-align:left;color:#a9bdb4;padding:10px;border-radius:11px;cursor:pointer}.chat-item:hover{background:rgba(255,255,255,.035);color:#fff}.chat-item.active{background:rgba(115,242,182,.065);border-color:rgba(115,242,182,.12);color:#e8fff4}.chat-title{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.chat-meta{font-size:9px;color:#60756d;margin-top:4px;display:flex;gap:7px}
+.side-bottom{margin-top:auto}.status{border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:17px;padding:10px}.status-row{display:flex;justify-content:space-between;margin:7px 0;font-size:10px;color:#9fb4aa}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#596b63;margin-right:6px}.dot.ok{background:var(--mint);box-shadow:0 0 12px rgba(115,242,182,.7)}.dot.warn{background:var(--warn)}.dot.err{background:var(--danger)}
+main{min-width:0;height:100vh;display:flex;flex-direction:column}.top{height:66px;flex:0 0 66px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(7,19,15,.58);backdrop-filter:blur(18px);z-index:5}.title{font-weight:760;font-size:14px}.title span{color:var(--muted);font-weight:500}.top-actions{display:flex;gap:7px}.pill{border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:11px;padding:7px 10px;font-size:10px;cursor:pointer}.pill.active,.pill.connected{border-color:rgba(115,242,182,.32);background:rgba(115,242,182,.075);color:var(--mint2)}
+.chat{flex:1;overflow:auto;padding:26px max(18px,calc((100vw - 1000px)/2));scroll-behavior:smooth}.hero{max-width:900px;margin:6vh auto 0}.badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:rgba(255,255,255,.035);padding:7px 10px;border-radius:99px;color:#b8cbc2;font-size:10px}.badge i{width:7px;height:7px;border-radius:50%;background:var(--mint);box-shadow:0 0 14px rgba(115,242,182,.65)}h1{font-size:clamp(43px,6.5vw,76px);line-height:.98;letter-spacing:-.065em;margin:19px 0 14px}.gradient{background:linear-gradient(90deg,#fff 25%,var(--mint2) 65%,#b7d8ff);-webkit-background-clip:text;background-clip:text;color:transparent}.hero p{max-width:680px;color:var(--muted);line-height:1.75;font-size:15px;margin:0}.quick{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}.quick button,.mode-btn{border:1px solid var(--line);background:rgba(255,255,255,.035);padding:9px 12px;border-radius:12px;cursor:pointer;color:#c4d4cd;font-size:11px}.quick button:hover,.mode-btn:hover{border-color:rgba(115,242,182,.3)}
+.messages{max-width:900px;margin:26px auto 20px;display:grid;gap:17px}.msg{display:flex;gap:10px;animation:up .2s ease}.msg.user{justify-content:flex-end}.avatar{width:32px;height:32px;flex:0 0 32px;border-radius:11px;display:grid;place-items:center;background:#10251c;border:1px solid var(--line);font-size:10px;font-weight:800}.user .avatar{background:linear-gradient(145deg,#2d6659,#31567c)}.bubble{max-width:min(760px,88%);line-height:1.72;font-size:14px}.user .bubble{padding:12px 14px;border:1px solid var(--line);background:rgba(255,255,255,.055);border-radius:18px 18px 5px 18px}.assistant-text{color:#dcebe4}.assistant-text strong{color:#fff}.assistant-text code{padding:2px 5px;background:#091a13;border:1px solid var(--line);border-radius:5px}.assistant-text ul{padding-left:20px}.message-tools{display:flex;gap:6px;margin-top:9px}.mini{border:1px solid var(--line);background:rgba(255,255,255,.025);color:#91aaa0;border-radius:9px;padding:5px 8px;font-size:10px;cursor:pointer}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;margin-top:13px}.card{border:1px solid var(--line);background:rgba(255,255,255,.03);border-radius:16px;overflow:hidden;cursor:pointer}.card img{width:100%;height:108px;object-fit:cover;display:block}.card-body{padding:11px}.card h3{font-size:14px;margin:0 0 4px}.card p{font-size:11px;color:var(--muted);margin:0}
+.composer-wrap{padding:10px 18px 18px;background:linear-gradient(transparent,var(--bg) 25%);position:sticky;bottom:0}.modebar{max-width:900px;margin:0 auto 8px;display:flex;gap:7px;overflow:auto;scrollbar-width:none}.modebar::-webkit-scrollbar{display:none}.mode-btn{white-space:nowrap;padding:7px 10px;font-size:10px}.mode-btn.active{color:var(--mint2);border-color:rgba(115,242,182,.32);background:rgba(115,242,182,.075)}
+.composer{max-width:900px;margin:auto;border:1px solid rgba(224,255,241,.16);background:rgba(12,29,22,.94);box-shadow:var(--shadow);border-radius:22px;padding:8px;display:flex;align-items:flex-end;gap:7px}textarea{flex:1;min-height:44px;max-height:150px;resize:none;border:0;outline:0;background:transparent;color:#fff;padding:10px 8px;line-height:1.55}textarea::placeholder{color:#61776e}.icon{width:43px;height:43px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.025);display:grid;place-items:center;cursor:pointer}.mic.listening{border-color:rgba(115,242,182,.6);background:rgba(115,242,182,.1)}.send{width:45px;height:45px;border:0;border-radius:15px;background:linear-gradient(145deg,var(--mint),#7dc5ff);color:#061a12;font-weight:950;cursor:pointer}.send:disabled{opacity:.45}.note{max-width:900px;margin:7px auto 0;text-align:center;color:#587067;font-size:9px}
+.panel{position:fixed;right:18px;top:76px;width:min(390px,calc(100vw - 36px));border:1px solid rgba(115,242,182,.22);background:rgba(8,24,17,.96);backdrop-filter:blur(25px);box-shadow:var(--shadow);border-radius:20px;padding:17px;z-index:30;display:none}.panel.show{display:block}.panel-head{display:flex;justify-content:space-between;margin-bottom:13px}.close{border:0;background:transparent;color:#7e978d;cursor:pointer;font-size:18px}.field{margin:11px 0}.field label{display:block;font-size:10px;color:#789087;margin-bottom:6px}.select{width:100%;padding:10px;border:1px solid var(--line);border-radius:11px;background:#0a1c15;color:#eafff4;outline:0}.privacy{font-size:10px;line-height:1.6;color:#789087;border:1px solid var(--line);background:rgba(255,255,255,.02);padding:10px;border-radius:11px}.panel-actions{display:flex;gap:7px;margin-top:12px}.panel-actions button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.035);cursor:pointer;font-size:10px}.primary{border-color:rgba(115,242,182,.3)!important;background:rgba(115,242,182,.08)!important;color:var(--mint2)}.location-status{font-size:10px;color:#9db2a9;padding:9px;border-radius:10px;background:rgba(255,255,255,.025);border:1px solid var(--line)}.location-status.ok{color:var(--mint2)}.location-status.warn{color:var(--warn)}
+.toast{position:fixed;right:18px;bottom:18px;max-width:380px;background:#122a20;border:1px solid var(--line);padding:11px 13px;border-radius:12px;box-shadow:var(--shadow);font-size:12px;display:none;z-index:50}.toast.show{display:block}
+.ai-stream{position:relative;overflow:hidden;min-height:32px;padding:3px 0 5px}.octopus-track{position:absolute;left:-15%;right:-15%;top:7px;height:30px;overflow:hidden;pointer-events:none}.octopus-runner{position:absolute;left:-45px;top:0;font-size:21px;opacity:.28;filter:drop-shadow(0 0 8px rgba(115,242,182,.55));animation:octopusRun 7s linear infinite}.octopus-runner:after{content:"🐙";position:absolute;left:-85px;top:5px;opacity:.22;transform:scale(.65)}@keyframes octopusRun{0%{transform:translateX(-60px)}25%{transform:translateX(25vw) translateY(-3px)}50%{transform:translateX(50vw) translateY(3px)}75%{transform:translateX(75vw) translateY(-3px)}100%{transform:translateX(115vw)}}.stream-text{position:relative;z-index:2;color:#dcebe4;white-space:pre-wrap}.stream-cursor{display:inline-block;width:2px;height:17px;margin-left:3px;background:var(--mint);animation:cursorBlink .75s steps(1) infinite}@keyframes cursorBlink{0%,45%{opacity:1}46%,100%{opacity:0}}
+@keyframes up{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.mobile{display:none}@media(max-width:800px){.app{grid-template-columns:1fr}aside{display:none}.mobile{display:inline}.top{padding:0 13px}.chat{padding:20px 14px}.hero{margin-top:6vh}h1{font-size:47px}.hero p{font-size:13px}.bubble{max-width:92%}.composer-wrap{padding:8px 10px 14px}.panel{right:10px;top:68px}.top-actions .language-summary{display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <div class="brand"><div class="logo">O</div><div><b>Octopus AI</b><small>കേരളത്തിന്റെ AI സഹായി</small></div></div>
+  <button class="new" id="newChat">＋ പുതിയ ചാറ്റ്</button>
+  <button class="connect" id="puterConnect">⚡ Connect Puter AI</button>
+  <div class="side-section"><div class="section-title">Recent chats</div><div class="history" id="history"></div></div>
+  <div class="side-bottom"><div class="status">
+    <div class="status-row"><span><i class="dot" id="puterDot"></i>Puter AI</span><span id="puterState">checking</span></div>
+    <div class="status-row"><span><i class="dot" id="apiDot"></i>V5 Engine</span><span id="apiState">checking</span></div>
+    <div class="status-row"><span>Language</span><span id="sideLanguage">Malayalam</span></div>
+    <div class="status-row"><span>Mode</span><span id="sideMode">Normal</span></div>
+    <div class="status-row"><span>Location</span><span id="sideLocation">Not shared</span></div>
+  </div></div>
+</aside>
+
+<main>
+<header class="top"><div class="title"><span class="mobile">☰ </span>Octopus AI <span>/ Kerala Intelligence</span></div>
+<div class="top-actions">
+<button class="pill" id="languageBtn">മലയാളം</button>
+<button class="pill" id="locationBtn">⌖ Location</button>
+<button class="pill" id="settingsBtn">⚙ Settings</button>
+<button class="pill" id="puterTop">⚡ <span id="puterTopText">Puter</span></button>
+<button class="pill active" id="autoVoice">🔊 Voice</button>
+</div></header>
+
+<section class="chat" id="chat">
+<div class="hero" id="hero"><span class="badge"><i></i> Puter AI + V5 Engine + Malayalam Voice</span>
+<h1>കേരളത്തോട് ചോദിക്കൂ.<br><span class="gradient">ഉപയോഗപ്രദമായ മറുപടി നേടൂ.</span></h1>
+<p>സ്ഥലങ്ങൾ, ഭക്ഷണം, യാത്ര, സംസ്കാരം, പഠനം, quiz, research — മലയാളത്തിലോ English-ലോ, അല്ലെങ്കിൽ രണ്ടും ചേർത്ത് ചോദിക്കാം.</p>
+<div class="quick">
+<button>മുന്നാറിൽ 2 ദിവസത്തേക്ക് പോകാൻ നല്ല സ്ഥലങ്ങൾ?</button><button>കൊച്ചിയിൽ നല്ല വെജിറ്റേറിയൻ റെസ്റ്റോറന്റ്?</button><button>എന്നെ quiz ചെയ്യൂ</button><button>കേരളത്തെക്കുറിച്ച് ഒരു കഥ പറയൂ</button>
+</div></div>
+<div class="messages" id="messages"></div>
+</section>
+
+<div class="composer-wrap">
+<div class="modebar" id="modebar">
+<button class="mode-btn" data-mode="normal">Normal</button><button class="mode-btn" data-mode="fun">Fun</button><button class="mode-btn" data-mode="quiz">Quiz</button><button class="mode-btn" data-mode="study">Study</button><button class="mode-btn" data-mode="travel">Travel</button><button class="mode-btn" data-mode="explore">Explore</button><button class="mode-btn" data-mode="local">Local</button><button class="mode-btn" data-mode="research">Research</button><button class="mode-btn" data-mode="story">Story</button>
+</div>
+<div class="composer"><button class="icon" id="clearBtn">⌫</button><textarea id="input" rows="1" placeholder="മലയാളത്തിൽ ചോദിക്കൂ… ഉദാ: വയനാട്ടിൽ ഇന്ന് എന്തൊക്കെ ചെയ്യാം?"></textarea><button class="icon mic" id="mic">🎙</button><button class="send" id="send">↑</button></div>
+<div class="note">Puter AI → V4 tools / Firebase / search / places · V5 fallback · consent-aware activity telemetry</div>
+</div>
+</main></div>
+
+<div class="panel" id="settingsPanel">
+<div class="panel-head"><b>Octopus preferences</b><button class="close" data-close="settingsPanel">×</button></div>
+<div class="field"><label>Response language</label><select class="select" id="languageSelect"><option value="ml">മലയാളം</option><option value="en">English</option><option value="mix">മലയാളം + English</option></select></div>
+<div class="field"><label>Conversation mode</label><select class="select" id="modeSelect"><option value="normal">Normal</option><option value="fun">Fun</option><option value="quiz">Quiz</option><option value="study">Study</option><option value="travel">Travel</option><option value="explore">Explore</option><option value="local">Local</option><option value="research">Research</option><option value="story">Story</option></select></div>
+<div class="privacy"><b>Privacy</b><br>Octopus uses an anonymous browser ID for active-user analytics. Location is optional and is only sent after you explicitly allow it. Language and mode are included with backend requests.</div>
+<div class="panel-actions"><button id="saveSettings" class="primary">Save</button><button id="clearLocal">Clear local chats</button></div>
+</div>
+
+<div class="panel" id="locationPanel">
+<div class="panel-head"><b>Location access</b><button class="close" data-close="locationPanel">×</button></div>
+<div class="location-status" id="locationStatus">Location is not shared.</div>
+<div class="privacy" style="margin-top:10px">Location can improve local answers and lets the future dashboard aggregate activity by broad area. Nothing is sent until you choose <b>Allow location</b>.</div>
+<div class="panel-actions"><button id="allowLocation" class="primary">Allow location</button><button id="denyLocation">Keep private</button></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{"use strict";
+const $=s=>document.querySelector(s),apiBase="http://127.0.0.1:5002";
+const K={visitor:"octopus_visitor_id_v1",chats:"octopus_chat_sessions_v2",active:"octopus_active_chat_v2",language:"octopus_language_v2",mode:"octopus_mode_v2",location:"octopus_location_consent_v1",voice:"octopus_auto_voice_v1"};
+const LANG={ml:{label:"മലയാളം",speech:"ml-IN",placeholder:"മലയാളത്തിൽ ചോദിക്കൂ… ഉദാ: വയനാട്ടിൽ ഇന്ന് എന്തൊക്കെ ചെയ്യാം?"},en:{label:"English",speech:"en-IN",placeholder:"Ask Octopus anything…"},mix:{label:"മലയാളം + English",speech:"en-IN",placeholder:"മലയാളത്തിലും English-ലും ചോദിക്കാം…"}};
+const MODES=["normal","fun","quiz","study","travel","explore","local","research","story"];
+const uid=p=>p+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,9);
+const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||"")}catch(_){return d}};
+const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v)),now=()=>new Date().toISOString();
+let visitor=localStorage.getItem(K.visitor);if(!visitor){visitor=uid("visitor");localStorage.setItem(K.visitor,visitor)}
+let chats=read(K.chats,[]),activeId=localStorage.getItem(K.active)||"",language=localStorage.getItem(K.language)||"ml",mode=localStorage.getItem(K.mode)||"normal",locationInfo=read(K.location,{status:"not_shared"}),autoSpeak=localStorage.getItem(K.voice)!=="0",busy=false,recognition=null,listening=false,heartbeatTimer=null;
+
+function toast(t){let x=$("#toast");x.textContent=t;x.classList.add("show");clearTimeout(window.__tt);window.__tt=setTimeout(()=>x.classList.remove("show"),2800)}
+function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+function md(s){let x=esc(s||"");x=x.replace(/```([\s\S]*?)```/g,"<pre style='overflow:auto;padding:11px;background:#06140e;border:1px solid #19372a;border-radius:11px'>$1</pre>");x=x.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>");x=x.replace(/^\s*[-•]\s+(.+)$/gm,"<li>$1</li>");x=x.replace(/(<li>[\s\S]*?<\/li>)/g,"<ul>$1</ul>");x=x.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");return"<p>"+x+"</p>"}
+function saveChats(){chats=chats.slice(0,60);save(K.chats,chats);localStorage.setItem(K.active,activeId)}
+function newChat(title="New chat"){let c={id:uid("chat"),title,messages:[],createdAt:now(),updatedAt:now(),language,mode};chats.unshift(c);activeId=c.id;saveChats();return c}
+function current(){let c=chats.find(x=>x.id===activeId);if(!c)c=newChat();return c}
+function titleFor(q){let s=String(q||"").replace(/\s+/g," ").trim();return s.length>42?s.slice(0,42).trim()+"…":s||"New chat"}
+function addStored(role,content,meta={}){let c=current();c.messages.push({id:uid("msg"),role,content:String(content||""),at:now(),...meta});c.updatedAt=now();if(role==="user"&&c.messages.filter(m=>m.role==="user").length===1)c.title=titleFor(content);c.language=language;c.mode=mode;saveChats()}
+function renderHistory(){let b=$("#history");b.innerHTML="";chats.slice().sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,40).forEach(c=>{let x=document.createElement("button");x.className="chat-item"+(c.id===activeId?" active":"");x.innerHTML=`<div class="chat-title">${esc(c.title)}</div><div class="chat-meta"><span>${esc(c.language||"ml")}</span><span>·</span><span>${c.messages.filter(m=>m.role==="user").length} questions</span></div>`;x.onclick=()=>openChat(c.id);b.appendChild(x)})}
+function openChat(id){activeId=id;localStorage.setItem(K.active,id);let c=current();language=c.language||language;mode=c.mode||mode;save(K.language,language);save(K.mode,mode);setLanguage(language,false);setMode(mode,false);renderMessages(c);renderHistory();sendActivity("chat_open",{chat_id:c.id})}
+function scroll(){let c=$("#chat");c.scrollTop=c.scrollHeight}
+function addDOM(role,text,cards=[]){let r=document.createElement("div");r.className="msg "+role;let a=document.createElement("div");a.className="avatar";a.textContent=role==="user"?"നീ":"O";let b=document.createElement("div");b.className="bubble";if(role==="user")b.textContent=text;else{let body=document.createElement("div");body.className="assistant-text";body.innerHTML=md(text);b.appendChild(body);let tools=document.createElement("div");tools.className="message-tools";let sp=document.createElement("button");sp.className="mini";sp.textContent="🔊 കേൾപ്പിക്കുക";sp.onclick=()=>speak(text);let cp=document.createElement("button");cp.className="mini";cp.textContent="⧉ Copy";cp.onclick=()=>navigator.clipboard?.writeText(text).then(()=>toast("Copied"));tools.append(sp,cp);b.appendChild(tools);if(cards?.length){let g=document.createElement("div");g.className="cards";cards.slice(0,8).forEach(p=>{let c=document.createElement("div");c.className="card";let img=p.imageUrl||p.image_url||p.image;c.innerHTML=(img?`<img src="${esc(img)}" loading="lazy" onerror="this.remove()">`:"")+`<div class="card-body"><h3>${esc(p.name||p.title||"Place")}</h3><p>${esc(p.shortDescription||p.description||p.district||"")}</p></div>`;c.onclick=()=>{$("#input").value=`Tell me more about ${p.name||"this place"}`;$("#input").focus()};g.appendChild(c)});b.appendChild(g)}}r.append(a,b);$("#messages").appendChild(r);scroll()}
+function addMsg(role,text,cards=[]){$("#hero").style.display="none";addDOM(role,text,cards);addStored(role,text,{cards});renderHistory()}
+function renderMessages(c){$("#messages").innerHTML="";$("#hero").style.display=c.messages.length?"none":"block";c.messages.forEach(m=>addDOM(m.role,m.content,m.cards||[]));scroll()}
+
+function setLanguage(v,telemetry=true){if(!LANG[v])v="ml";language=v;localStorage.setItem(K.language,v);$("#languageBtn").textContent=LANG[v].label;$("#sideLanguage").textContent=LANG[v].label;$("#input").placeholder=LANG[v].placeholder;if(recognition)recognition.lang=LANG[v].speech;current().language=v;saveChats();if(telemetry)sendActivity("language_changed",{language:v})}
+function setMode(v,telemetry=true){if(!MODES.includes(v))v="normal";mode=v;localStorage.setItem(K.mode,v);$("#sideMode").textContent=v[0].toUpperCase()+v.slice(1);$("#modeSelect").value=v;document.querySelectorAll(".mode-btn").forEach(x=>x.classList.toggle("active",x.dataset.mode===v));current().mode=v;saveChats();if(telemetry)sendActivity("mode_changed",{mode:v})}
+
+function locationUI(){let s=locationInfo.status||"not_shared";$("#sideLocation").textContent=s==="granted"?(locationInfo.area||"Shared"):s==="denied"?"Private":"Not shared";let b=$("#locationStatus");b.className="location-status "+(s==="granted"?"ok":s==="denied"?"warn":"");b.textContent=s==="granted"?`Location access enabled${locationInfo.area?" · "+locationInfo.area:""}.`:s==="denied"?"Location is private.":"Location is not shared."}
+function requestLocation(){if(!navigator.geolocation){toast("This browser does not support location.");return}$("#locationStatus").textContent="Waiting for your permission…";navigator.geolocation.getCurrentPosition(async p=>{locationInfo={status:"granted",lat:+p.coords.latitude.toFixed(6),lng:+p.coords.longitude.toFixed(6),accuracy:Math.round(p.coords.accuracy||0),grantedAt:now()};save(K.location,locationInfo);locationUI();toast("Location enabled");await sendActivity("location_granted",{location:{lat:locationInfo.lat,lng:locationInfo.lng,accuracy:locationInfo.accuracy}});try{let r=await fetch(apiBase+"/api/activity/location",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({visitor_id:visitor,session_id:current().id,location:locationInfo})});if(r.ok){let d=await r.json().catch(()=>({}));if(d.area){locationInfo.area=d.area;save(K.location,locationInfo);locationUI()}}}catch(_){}},()=>{locationInfo={status:"denied",deniedAt:now()};save(K.location,locationInfo);locationUI();toast("Location kept private");sendActivity("location_denied")},{enableHighAccuracy:false,maximumAge:300000,timeout:10000})}
+
+function payload(event,extra={}){let c=current();return{event,visitor_id:visitor,session_id:c?.id||activeId,chat_id:c?.id||activeId,timestamp:now(),language,mode,page:"octopus_ai",user_agent:navigator.userAgent,viewport:{width:innerWidth,height:innerHeight},location_consent:locationInfo.status||"not_shared",location:locationInfo.status==="granted"?{lat:locationInfo.lat,lng:locationInfo.lng,accuracy:locationInfo.accuracy}:null,...extra}}
+async function sendActivity(event,extra={}){let p=payload(event,extra);try{let r=await fetch(apiBase+"/api/activity/event",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(p),keepalive:event==="page_hidden"||event==="chat_message"});if(r.ok)return true}catch(_){}try{let q=read("octopus_activity_queue_v1",[]);q.push(p);save("octopus_activity_queue_v1",q.slice(-100))}catch(_){}return false}
+function heartbeat(){if(heartbeatTimer)clearInterval(heartbeatTimer);sendActivity("active",{visibility:document.visibilityState});heartbeatTimer=setInterval(()=>{if(document.visibilityState==="visible")sendActivity("heartbeat",{active:true})},30000)}
+
+function setPuter(k,t){$("#puterState").textContent=t;let d=$("#puterDot");d.classList.remove("ok","warn","err");d.classList.add(k)}
+async function connectPuter(){if(!window.OctapusPuterV4){toast("Puter bridge missing.");setPuter("err","bridge missing");return false}try{if(!window.puter?.auth?.isSignedIn?.())await window.OctapusPuterV4.signIn();setPuter("ok","connected");$("#puterTopText").textContent="Connected";$("#puterTop").classList.add("connected");$("#puterConnect").classList.add("connected");sendActivity("puter_connected");return true}catch(e){setPuter("warn","not signed in");toast("Puter sign-in cancelled or failed.");return false}}
+async function askPuter(q){if(!window.OctapusPuterV4)throw Error("Puter bridge unavailable");let c=current();let r=await window.OctapusPuterV4.ask({message:q,apiBase,history:c.messages.slice(-12).map(m=>({role:m.role,content:m.content})),model:"gpt-5.6-luna",maxToolRounds:4,maxTokens:1400,reasoningEffort:"medium",language,mode,userLocation:locationInfo.status==="granted"?locationInfo:null});let answer=r?.answer||r?.response?.message?.content||"";if(!answer)throw Error("Puter returned an empty answer");setPuter("ok","connected");$("#puterTopText").textContent="Connected";$("#puterTop").classList.add("connected");return{answer:String(answer),context:r?.context||{}}}
+async function askV5(q){let c=current();let res=await fetch(apiBase+"/api/v5/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q,mode,language,languagePreference:language,history:c.messages.slice(-12),context:{mode,language,languagePreference:language,voiceLocale:LANG[language].speech,visitorId:visitor,chatId:c.id,location:locationInfo.status==="granted"?{lat:locationInfo.lat,lng:locationInfo.lng,accuracy:locationInfo.accuracy}:null},state:read("octopus_v5_state_v2",{}),voice:false,voiceLocale:LANG[language].speech})});let d=await res.json();if(!res.ok||!d.ok)throw Error(d.message||d.error||"V5 request failed");return d}
+
+function speak(text){if(!autoSpeak||!("speechSynthesis"in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(String(text||"").replace(/\*\*/g,"").replace(/[`#•]/g,"").replace(/\n+/g, ". "));u.lang=LANG[language].speech;u.rate=.96;let v=speechSynthesis.getVoices().find(x=>x.lang?.toLowerCase().startsWith(u.lang.split("-")[0]));if(v)u.voice=v;speechSynthesis.speak(u)}
+function setupRecognition(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$("#mic").disabled=true;return}recognition=new SR();recognition.lang=LANG[language].speech;recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{listening=true;$("#mic").classList.add("listening");sendActivity("voice_started")};recognition.onresult=e=>{let f="",i="";for(let n=e.resultIndex;n<e.results.length;n++){let t=e.results[n][0].transcript;e.results[n].isFinal?f+=t:i+=t}$("#input").value=f||i;$("#input").style.height="auto";$("#input").style.height=Math.min($("#input").scrollHeight,150)+"px"};recognition.onerror=e=>{if(e.error!=="aborted")toast("Voice input: "+e.error);stopRecognition()};recognition.onend=()=>{let t=$("#input").value.trim();stopRecognition();if(t&&!busy)ask()}}
+function stopRecognition(){listening=false;$("#mic").classList.remove("listening")}
+function startVoice(){if(!recognition){setupRecognition();if(!recognition)return}if(listening){recognition.stop();return}speechSynthesis.cancel();recognition.lang=LANG[language].speech;try{recognition.start()}catch(_){}}
+function typing(){let r=document.createElement("div");r.className="msg assistant";r.id="typing";r.innerHTML='<div class="avatar">O</div><div class="bubble"><div class="ai-stream"><div class="octopus-track"><div class="octopus-runner">🐙</div></div><div class="stream-text">Thinking <span class="stream-cursor"></span></div></div></div>';$("#messages").appendChild(r);scroll()}
+
+async function ask(){if(busy)return;let q=$("#input").value.trim();if(!q)return;busy=true;$("#send").disabled=true;if(!activeId)newChat(titleFor(q));addMsg("user",q);$("#input").value="";$("#input").style.height="auto";typing();await sendActivity("chat_message",{question_length:q.length,question:q.slice(0,1000),chat_title:current().title});
+try{let answer="",cards=[],source="puter";try{if(!window.puter?.auth?.isSignedIn?.())await connectPuter();let r=await askPuter(q);answer=r.answer;let p=r.context?.places||r.context?.results||r.context?.placeResults;if(Array.isArray(p))cards=p}catch(e){source="v5";setPuter("warn","fallback");let d=await askV5(q);answer=d.reply||"മറുപടി ലഭിച്ചില്ല.";cards=d.data?.places?.places||d.data?.places?.results||[];if(d.state)save("octopus_v5_state_v2",d.state);setMode(d.mode||mode,false);toast("Puter unavailable — V5 fallback used");await sendActivity("ai_fallback",{error:String(e?.message||e).slice(0,500)})}$("#typing")?.remove();addMsg("assistant",answer,cards);await sendActivity("chat_response",{source,answer_length:answer.length});if(autoSpeak)speak(answer)}catch(e){$("#typing")?.remove();addMsg("assistant","ക്ഷമിക്കണം — ഇപ്പോൾ മറുപടി ലഭിച്ചില്ല.\n\n"+(e.message||"Backend പരിശോധിക്കൂ."));await sendActivity("chat_error",{error:String(e?.message||e).slice(0,500)});toast(e.message||"Request failed")}finally{busy=false;$("#send").disabled=false;$("#input").focus();renderHistory()}}
+
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$("#"+b.dataset.close).classList.remove("show"));
+$("#settingsBtn").onclick=()=>{$("#settingsPanel").classList.toggle("show");$("#locationPanel").classList.remove("show")};
+$("#locationBtn").onclick=()=>{$("#locationPanel").classList.toggle("show");$("#settingsPanel").classList.remove("show");locationUI()};
+$("#allowLocation").onclick=requestLocation;
+$("#denyLocation").onclick=()=>{locationInfo={status:"denied",deniedAt:now()};save(K.location,locationInfo);locationUI();sendActivity("location_denied");toast("Location kept private")};
+$("#saveSettings").onclick=()=>{setLanguage($("#languageSelect").value);setMode($("#modeSelect").value);$("#settingsPanel").classList.remove("show");toast("Preferences saved")};
+$("#clearLocal").onclick=()=>{if(confirm("Clear local Octopus chat history on this browser?")){localStorage.removeItem(K.chats);localStorage.removeItem(K.active);chats=[];activeId="";newChat();renderHistory();renderMessages(current());toast("Local chats cleared")}};
+$("#newChat").onclick=()=>{let c=newChat();renderHistory();renderMessages(c);sendActivity("chat_created",{chat_id:c.id});$("#input").focus()};
+document.querySelectorAll(".mode-btn").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+document.querySelectorAll(".quick button").forEach(b=>b.onclick=()=>{$("#input").value=b.textContent;$("#input").focus()});
+$("#send").onclick=ask;$("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask()}});
+$("#input").addEventListener("input",()=>{$("#input").style.height="auto";$("#input").style.height=Math.min($("#input").scrollHeight,150)+"px"});
+$("#mic").onclick=startVoice;$("#clearBtn").onclick=()=>{$("#input").value="";$("#input").focus()};
+$("#autoVoice").onclick=()=>{autoSpeak=!autoSpeak;localStorage.setItem(K.voice,autoSpeak?"1":"0");$("#autoVoice").classList.toggle("active",autoSpeak);if(!autoSpeak)speechSynthesis.cancel()};
+$("#puterConnect").onclick=connectPuter;$("#puterTop").onclick=connectPuter;$("#languageBtn").onclick=()=>{$("#settingsPanel").classList.add("show");$("#languageSelect").focus()};
+$("#languageSelect").onchange=e=>setLanguage(e.target.value);$("#modeSelect").onchange=e=>setMode(e.target.value);
+
+async function health(){try{let r=await fetch(apiBase+"/api/health");if(!r.ok)throw 0;$("#apiDot").classList.add("ok");$("#apiState").textContent="online"}catch(_){$("#apiDot").classList.add("err");$("#apiState").textContent="offline"}if(window.puter?.ai)setPuter("ok","ready");if(window.puter?.auth?.isSignedIn?.()){setPuter("ok","connected");$("#puterTopText").textContent="Connected";$("#puterTop").classList.add("connected")}}
+if(!chats.length)newChat();else if(!chats.some(c=>c.id===activeId))activeId=chats[0].id;
+setLanguage(language,false);setMode(mode,false);$("#languageSelect").value=language;$("#modeSelect").value=mode;locationUI();renderHistory();renderMessages(current());setupRecognition();health();heartbeat();sendActivity("page_open",{chat_id:current().id});
+document.addEventListener("visibilitychange",()=>{sendActivity(document.visibilityState==="visible"?"page_visible":"page_hidden",{visibility:document.visibilityState});if(document.visibilityState==="visible")heartbeat()});
+window.addEventListener("beforeunload",()=>sendActivity("page_hidden",{visibility:"hidden"}));
+setInterval(async()=>{let q=read("octopus_activity_queue_v1",[]);if(!q.length)return;try{let r=await fetch(apiBase+"/api/activity/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({events:q.slice(-50)})});if(r.ok)localStorage.removeItem("octopus_activity_queue_v1")}catch(_){}},45000);
+window.OctopusFrontend={visitorId,getState:()=>({visitorId,activeId,language,mode,location:locationInfo,chats}),sendActivity,requestLocation,setLanguage,setMode};
+})();
+</script>
+</body></html>

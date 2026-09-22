@@ -267,8 +267,20 @@ def normalize_text(text: Any) -> str:
     return text.strip()
 
 
-def compact_text(text: Any) -> str:
-    return re.sub(r"\s+", " ", safe_text(text)).strip()
+def compact_text(text: Any, limit: Optional[int] = None) -> str:
+    if text is None:
+        value = ""
+    elif isinstance(text, (dict, list, tuple)):
+        value = str(text)
+    else:
+        value = str(text)
+
+    value = re.sub(r"\s+", " ", value).strip()
+
+    if limit is not None and len(value) > limit:
+        return value[:max(0, limit)].rstrip() + "..."
+
+    return value
 
 
 def clean_for_display(text: Any, limit: int = 700) -> str:

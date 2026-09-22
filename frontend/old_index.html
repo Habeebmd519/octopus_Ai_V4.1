@@ -1,0 +1,1303 @@
+<!doctype html>
+<html lang="ml">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07130f">
+  <meta name="description"
+    content="Octapus AI — Kerala-first AI assistant with Puter AI, V5 engine and Malayalam voice.">
+  <title>Octapus AI — കേരളത്തിന്റെ AI</title>
+
+  <!-- Puter AI -->
+  <script src="https://js.puter.com/v2/"></script>
+  <script src="./puter-agent.js"></script>
+
+  <style>
+    :root {
+      --bg: #07130f;
+      --bg2: #0b1c16;
+      --panel: rgba(13, 31, 24, .82);
+      --line: rgba(224, 255, 241, .11);
+      --text: #f3fff9;
+      --muted: #91aa9f;
+      --mint: #73f2b6;
+      --mint2: #b5ffd9;
+      --blue: #8bb8ff;
+      --danger: #ff8d8d;
+      --shadow: 0 30px 90px rgba(0, 0, 0, .34);
+      --r: 24px
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(900px 600px at 8% -8%, rgba(42, 146, 105, .24), transparent 62%),
+        radial-gradient(850px 600px at 100% 4%, rgba(59, 103, 184, .18), transparent 60%), var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Noto Sans Malayalam", sans-serif
+    }
+
+    body {
+      overflow: hidden
+    }
+
+    button,
+    textarea {
+      font: inherit
+    }
+
+    button {
+      color: inherit
+    }
+
+    .app {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 270px minmax(0, 1fr)
+    }
+
+    aside {
+      height: 100vh;
+      padding: 22px 17px;
+      border-right: 1px solid var(--line);
+      background: rgba(3, 13, 10, .72);
+      backdrop-filter: blur(24px);
+      display: flex;
+      flex-direction: column
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 4px 8px 22px
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, var(--mint), #55b9ff);
+      color: #052018;
+      font-weight: 900
+    }
+
+    .brand b {
+      font-size: 18px;
+      letter-spacing: -.03em
+    }
+
+    .brand small {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 2px
+    }
+
+    .new,
+    .connect {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 15px;
+      border: 1px solid rgba(115, 242, 182, .2);
+      background: rgba(115, 242, 182, .07);
+      cursor: pointer;
+      font-weight: 750
+    }
+
+    .connect {
+      margin-top: 8px;
+      background: rgba(139, 184, 255, .07);
+      border-color: rgba(139, 184, 255, .2)
+    }
+
+    .section {
+      margin-top: 25px
+    }
+
+    .section-title {
+      font-size: 10px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: #688075;
+      padding: 0 9px 9px
+    }
+
+    .history {
+      display: grid;
+      gap: 4px
+    }
+
+    .history button {
+      border: 0;
+      background: transparent;
+      text-align: left;
+      color: #a9bdb4;
+      padding: 10px;
+      border-radius: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer
+    }
+
+    .history button:hover {
+      background: rgba(255, 255, 255, .04);
+      color: #fff
+    }
+
+    .side-bottom {
+      margin-top: auto
+    }
+
+    .status {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .025);
+      border-radius: 17px;
+      padding: 12px
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 11px;
+      color: #9fb4aa
+    }
+
+    .dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #596b63;
+      margin-right: 7px
+    }
+
+    .dot.ok {
+      background: var(--mint);
+      box-shadow: 0 0 12px rgba(115, 242, 182, .75)
+    }
+
+    .dot.warn {
+      background: #ffd36b
+    }
+
+    .dot.err {
+      background: var(--danger)
+    }
+
+    main {
+      min-width: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column
+    }
+
+    .top {
+      height: 68px;
+      flex: 0 0 68px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 25px;
+      background: rgba(7, 19, 15, .58);
+      backdrop-filter: blur(18px);
+      z-index: 5
+    }
+
+    .title {
+      font-weight: 750;
+      font-size: 14px
+    }
+
+    .title span {
+      color: var(--muted);
+      font-weight: 500
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .lang,
+    .voice-toggle,
+    .puter-btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .035);
+      border-radius: 12px;
+      padding: 8px 11px;
+      font-size: 11px;
+      cursor: pointer
+    }
+
+    .lang.active,
+    .voice-toggle.active,
+    .puter-btn.connected {
+      border-color: rgba(115, 242, 182, .34);
+      background: rgba(115, 242, 182, .08);
+      color: var(--mint2)
+    }
+
+    .puter-btn {
+      display: flex;
+      gap: 6px;
+      align-items: center
+    }
+
+    .mobile {
+      display: none
+    }
+
+    .chat {
+      flex: 1;
+      overflow: auto;
+      padding: 30px max(18px, calc((100vw - 980px)/2));
+      scroll-behavior: smooth
+    }
+
+    .hero {
+      max-width: 900px;
+      margin: 7vh auto 0
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .035);
+      padding: 7px 10px;
+      border-radius: 99px;
+      color: #b8cbc2;
+      font-size: 10px
+    }
+
+    .badge i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 14px rgba(115, 242, 182, .65)
+    }
+
+    h1 {
+      font-size: clamp(43px, 6.5vw, 76px);
+      line-height: .98;
+      letter-spacing: -.065em;
+      margin: 19px 0 14px;
+      max-width: 840px
+    }
+
+    .gradient {
+      background: linear-gradient(90deg, #fff 25%, var(--mint2) 65%, #b7d8ff);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent
+    }
+
+    .hero p {
+      max-width: 680px;
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 15px;
+      margin: 0
+    }
+
+    .quick {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 22px
+    }
+
+    .quick button {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .035);
+      padding: 9px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: #c4d4cd;
+      font-size: 12px
+    }
+
+    .quick button:hover {
+      border-color: rgba(115, 242, 182, .3);
+      background: rgba(115, 242, 182, .06)
+    }
+
+    .messages {
+      max-width: 900px;
+      margin: 28px auto 20px;
+      display: grid;
+      gap: 18px
+    }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      animation: up .2s ease
+    }
+
+    .msg.user {
+      justify-content: flex-end
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      flex: 0 0 32px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: #10251c;
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 800
+    }
+
+    .user .avatar {
+      background: linear-gradient(145deg, #2d6659, #31567c)
+    }
+
+    .bubble {
+      max-width: min(760px, 88%);
+      line-height: 1.72;
+      font-size: 14px
+    }
+
+    .user .bubble {
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .055);
+      border-radius: 18px 18px 5px 18px
+    }
+
+    .assistant-text {
+      color: #dcebe4
+    }
+
+    .assistant-text p {
+      margin: .2em 0 .8em
+    }
+
+    .assistant-text strong {
+      color: #fff
+    }
+
+    .assistant-text code {
+      padding: 2px 5px;
+      background: #091a13;
+      border: 1px solid var(--line);
+      border-radius: 5px
+    }
+
+    .assistant-text ul {
+      padding-left: 20px
+    }
+
+    .message-tools {
+      display: flex;
+      gap: 6px;
+      margin-top: 9px
+    }
+
+    .mini {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .025);
+      color: #91aaa0;
+      border-radius: 9px;
+      padding: 5px 8px;
+      font-size: 10px;
+      cursor: pointer
+    }
+
+    .mini:hover {
+      color: #fff
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 9px;
+      margin-top: 13px
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, rgba(255, 255, 255, .05), rgba(255, 255, 255, .015));
+      border-radius: 16px;
+      overflow: hidden;
+      cursor: pointer
+    }
+
+    .card:hover {
+      border-color: rgba(115, 242, 182, .28);
+      transform: translateY(-1px)
+    }
+
+    .card img {
+      width: 100%;
+      height: 108px;
+      object-fit: cover;
+      display: block
+    }
+
+    .card-body {
+      padding: 11px
+    }
+
+    .card h3 {
+      font-size: 14px;
+      margin: 0 0 4px
+    }
+
+    .card p {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.45
+    }
+
+    .typing {
+      display: flex;
+      gap: 4px;
+      padding: 12px 2px
+    }
+
+    .typing i {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #789087;
+      animation: b 1s infinite
+    }
+
+    .typing i:nth-child(2) {
+      animation-delay: .15s
+    }
+
+    .typing i:nth-child(3) {
+      animation-delay: .3s
+    }
+
+    @keyframes b {
+      50% {
+        opacity: .2;
+        transform: translateY(-3px)
+      }
+    }
+
+    @keyframes up {
+      from {
+        opacity: 0;
+        transform: translateY(7px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .composer-wrap {
+      padding: 12px 18px 20px;
+      background: linear-gradient(transparent, var(--bg) 25%);
+      position: sticky;
+      bottom: 0
+    }
+
+    .composer {
+      max-width: 900px;
+      margin: auto;
+      border: 1px solid rgba(224, 255, 241, .16);
+      background: rgba(12, 29, 22, .94);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      padding: 8px;
+      display: flex;
+      align-items: flex-end;
+      gap: 7px
+    }
+
+    textarea {
+      flex: 1;
+      min-height: 44px;
+      max-height: 150px;
+      resize: none;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      color: #fff;
+      padding: 10px 8px;
+      line-height: 1.55
+    }
+
+    .composer textarea::placeholder {
+      color: #61776e
+    }
+
+    .icon {
+      width: 43px;
+      height: 43px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .025);
+      display: grid;
+      place-items: center;
+      cursor: pointer
+    }
+
+    .icon:hover {
+      background: rgba(255, 255, 255, .06)
+    }
+
+    .mic {
+      position: relative
+    }
+
+    .mic.listening {
+      border-color: rgba(115, 242, 182, .6);
+      background: rgba(115, 242, 182, .1)
+    }
+
+    .send {
+      width: 45px;
+      height: 45px;
+      border: 0;
+      border-radius: 15px;
+      background: linear-gradient(145deg, var(--mint), #7dc5ff);
+      color: #061a12;
+      font-weight: 950;
+      cursor: pointer
+    }
+
+    .send:disabled {
+      opacity: .45
+    }
+
+    .note {
+      max-width: 900px;
+      margin: 7px auto 0;
+      text-align: center;
+      color: #587067;
+      font-size: 9px
+    }
+
+    .voice-panel {
+      position: fixed;
+      left: 50%;
+      bottom: 105px;
+      transform: translateX(-50%) translateY(20px);
+      opacity: 0;
+      pointer-events: none;
+      width: min(420px, calc(100vw - 28px));
+      border: 1px solid rgba(115, 242, 182, .22);
+      background: rgba(8, 24, 17, .94);
+      backdrop-filter: blur(22px);
+      box-shadow: var(--shadow);
+      border-radius: 22px;
+      padding: 17px;
+      text-align: center;
+      transition: .2s;
+      z-index: 20
+    }
+
+    .voice-panel.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+      pointer-events: auto
+    }
+
+    .orb {
+      width: 74px;
+      height: 74px;
+      margin: 2px auto 12px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 35% 30%, #d8fff0 0 4%, var(--mint) 15%, #23745a 50%, #0d291e 72%);
+      box-shadow: 0 0 0 8px rgba(115, 242, 182, .05), 0 0 55px rgba(115, 242, 182, .18);
+      font-size: 24px
+    }
+
+    .voice-panel.listening .orb {
+      animation: orb 1.15s ease-in-out infinite
+    }
+
+    @keyframes orb {
+      50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 0 15px rgba(115, 242, 182, .05), 0 0 70px rgba(115, 242, 182, .28)
+      }
+    }
+
+    .voice-label {
+      font-weight: 800;
+      font-size: 14px
+    }
+
+    .voice-sub {
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 4px
+    }
+
+    .voice-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 13px
+    }
+
+    .voice-actions button {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .04);
+      border-radius: 11px;
+      padding: 8px 12px;
+      font-size: 11px;
+      cursor: pointer
+    }
+
+    .primary {
+      border-color: rgba(115, 242, 182, .3) !important;
+      background: rgba(115, 242, 182, .08) !important;
+      color: var(--mint2)
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      max-width: 360px;
+      background: #122a20;
+      border: 1px solid var(--line);
+      padding: 11px 13px;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      display: none;
+      z-index: 30
+    }
+
+    .toast.show {
+      display: block
+    }
+
+    /* ================================
+   OCTAPUS AI RESPONSE ANIMATION
+   ================================ */
+
+    .ai-stream {
+      position: relative;
+      overflow: hidden;
+      min-height: 32px;
+      padding: 3px 0 5px;
+    }
+
+    /* Running lane behind the answer */
+    .octopus-track {
+      position: absolute;
+      left: -15%;
+      right: -15%;
+      top: 7px;
+      height: 30px;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    /* Main running octopus */
+    .octopus-runner {
+      position: absolute;
+      left: -45px;
+      top: 0;
+      font-size: 21px;
+      line-height: 1;
+      opacity: .28;
+      filter: drop-shadow(0 0 8px rgba(115, 242, 182, .55));
+      animation: octopusRun 7s linear infinite;
+      will-change: transform;
+    }
+
+    /* Second faint octopus gives depth */
+    .octopus-runner::after {
+      content: "🐙";
+      position: absolute;
+      left: -85px;
+      top: 5px;
+      opacity: .22;
+      transform: scale(.65);
+      filter: blur(.2px);
+    }
+
+    @keyframes octopusRun {
+      0% {
+        transform: translateX(-60px) translateY(3px) rotate(-4deg);
+      }
+
+      25% {
+        transform: translateX(25vw) translateY(-3px) rotate(4deg);
+      }
+
+      50% {
+        transform: translateX(50vw) translateY(3px) rotate(-3deg);
+      }
+
+      75% {
+        transform: translateX(75vw) translateY(-3px) rotate(4deg);
+      }
+
+      100% {
+        transform: translateX(115vw) translateY(0) rotate(-2deg);
+      }
+    }
+
+    /* Actual answer text */
+    .stream-text {
+      position: relative;
+      z-index: 2;
+      color: #dcebe4;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.72;
+      font-size: 14px;
+    }
+
+    /* Cursor at the end of streaming text */
+    .stream-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 17px;
+      margin-left: 3px;
+      vertical-align: -3px;
+      background: var(--mint);
+      box-shadow: 0 0 10px rgba(115, 242, 182, .8);
+      animation: cursorBlink .75s steps(1) infinite;
+    }
+
+    @keyframes cursorBlink {
+
+      0%,
+      45% {
+        opacity: 1;
+      }
+
+      46%,
+      100% {
+        opacity: 0;
+      }
+    }
+
+    /* Small glow underneath the streaming answer */
+    .ai-stream::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 75px;
+      height: 2px;
+      border-radius: 99px;
+      background: var(--mint);
+      box-shadow:
+        0 0 12px rgba(115, 242, 182, .75),
+        0 0 28px rgba(115, 242, 182, .25);
+      animation: streamGlow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes streamGlow {
+
+      0%,
+      100% {
+        opacity: .25;
+        transform: scaleX(.6);
+        transform-origin: left;
+      }
+
+      50% {
+        opacity: 1;
+        transform: scaleX(1.5);
+        transform-origin: left;
+      }
+    }
+
+    /* When answer finishes */
+    .ai-stream.done .octopus-track {
+      opacity: 0;
+      transition: opacity .35s ease;
+    }
+
+    .ai-stream.done::after {
+      opacity: 0;
+      transition: opacity .35s ease;
+    }
+
+    /* Slightly smoother assistant appearance */
+    .msg.assistant {
+      animation: assistantEnter .28s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    @keyframes assistantEnter {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media(max-width:800px) {
+      body {
+        overflow: hidden
+      }
+
+      .app {
+        grid-template-columns: 1fr
+      }
+
+      aside {
+        display: none
+      }
+
+      .mobile {
+        display: inline
+      }
+
+      .top {
+        padding: 0 13px
+      }
+
+      .top-actions {
+        gap: 5px
+      }
+
+      .top .lang:nth-child(2) {
+        display: none
+      }
+
+      .chat {
+        padding: 20px 14px
+      }
+
+      .hero {
+        margin-top: 6vh
+      }
+
+      h1 {
+        font-size: 47px
+      }
+
+      .hero p {
+        font-size: 13px
+      }
+
+      .messages {
+        margin-top: 24px
+      }
+
+      .bubble {
+        max-width: 92%
+      }
+
+      .composer-wrap {
+        padding: 9px 10px 15px
+      }
+
+      .note {
+        font-size: 8px
+      }
+
+      .voice-panel {
+        bottom: 96px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <div class="logo">O</div>
+        <div><b>Octapus AI</b><small>കേരളത്തിന്റെ AI സഹായി</small></div>
+      </div>
+
+      <button class="new" id="newChat">＋ പുതിയ സംഭാഷണം</button>
+      <button class="connect" id="puterConnect">⚡ Connect Puter AI</button>
+
+      <div class="section">
+        <div class="section-title">Recent</div>
+        <div class="history" id="history"></div>
+      </div>
+
+      <div class="side-bottom">
+        <div class="status">
+          <div class="status-row"><span><i class="dot" id="puterDot"></i> Puter AI</span><span
+              id="puterState">checking</span></div>
+          <div class="status-row"><span><i class="dot" id="apiDot"></i> V5 Engine</span><span
+              id="apiState">checking</span></div>
+          <div class="status-row"><span><i class="dot" id="voiceDot"></i> Malayalam Voice</span><span
+              id="voiceState">ready</span></div>
+          <div class="status-row"><span>Mode</span><span id="sideMode">Normal</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="top">
+        <div class="title"><span class="mobile">☰ </span>Octapus AI <span>/ Kerala Intelligence</span></div>
+        <div class="top-actions">
+          <button class="lang active" id="mlBtn">മലയാളം</button>
+          <button class="lang" id="enBtn">English</button>
+          <button class="puter-btn" id="puterTop">⚡ <span id="puterTopText">Puter</span></button>
+          <button class="voice-toggle active" id="autoVoice">🔊 Voice</button>
+        </div>
+      </header>
+
+      <section class="chat" id="chat">
+        <div class="hero" id="hero">
+          <span class="badge"><i></i> Puter AI + V5 Engine + Malayalam Voice</span>
+          <h1>കേരളത്തോട് ചോദിക്കൂ.<br><span class="gradient">ഉപയോഗപ്രദമായ മറുപടി നേടൂ.</span></h1>
+          <p>സ്ഥലങ്ങൾ, ഭക്ഷണം, യാത്ര, സംസ്കാരം, പഠനം, quiz, research — Octapus AI-യോട് മലയാളത്തിലോ ശബ്ദത്തിലോ ചോദിക്കാം.
+          </p>
+          <div class="quick">
+            <button>മുന്നാറിൽ 2 ദിവസത്തേക്ക് പോകാൻ നല്ല സ്ഥലങ്ങൾ?</button>
+            <button>കൊച്ചിയിൽ നല്ല വെജിറ്റേറിയൻ റെസ്റ്റോറന്റ്?</button>
+            <button>എന്നെ quiz ചെയ്യൂ</button>
+            <button>കേരളത്തെക്കുറിച്ച് ഒരു കഥ പറയൂ</button>
+          </div>
+        </div>
+        <div class="messages" id="messages"></div>
+      </section>
+
+      <div class="composer-wrap">
+        <div class="composer">
+          <button class="icon" id="clearBtn" title="Clear">⌫</button>
+          <textarea id="input" rows="1"
+            placeholder="മലയാളത്തിൽ ചോദിക്കൂ…  ഉദാ: വയനാട്ടിൽ ഇന്ന് എന്തൊക്കെ ചെയ്യാം?"></textarea>
+          <button class="icon mic" id="mic" title="മലയാളത്തിൽ സംസാരിക്കുക">🎙</button>
+          <button class="send" id="send" title="Send">↑</button>
+        </div>
+        <div class="note">Puter AI → V4 tools / Firebase / search / places · V5 fallback · Malayalam browser voice</div>
+      </div>
+    </main>
+  </div>
+
+  <div class="voice-panel" id="voicePanel">
+    <div class="orb">🎙</div>
+    <div class="voice-label" id="voiceLabel">മലയാളത്തിൽ സംസാരിക്കൂ</div>
+    <div class="voice-sub" id="voiceSub">ഞാൻ കേൾക്കുകയാണ്…</div>
+    <div class="voice-actions">
+      <button class="primary" id="stopVoice">നിർത്തുക</button>
+      <button id="closeVoice">അടയ്ക്കുക</button>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      const $ = s => document.querySelector(s);
+      const input = $("#input"), send = $("#send"), mic = $("#mic"), messages = $("#messages"), hero = $("#hero");
+      const apiBase = "http://127.0.0.1:5002";
+      let mode = localStorage.getItem("octapus_v5_mode") || "normal";
+      let busy = false, autoSpeak = true, lang = localStorage.getItem("octapus_lang") || "ml-IN";
+      let history = JSON.parse(localStorage.getItem("octapus_v5_history") || "[]");
+      let state = JSON.parse(localStorage.getItem("octapus_v5_state") || "{}");
+      let recognition = null, listening = false;
+
+      function toast(t) { const x = $("#toast"); x.textContent = t; x.classList.add("show"); setTimeout(() => x.classList.remove("show"), 2800) }
+      function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])) }
+      function md(s) {
+        let x = esc(s || "");
+        x = x.replace(/```([\s\S]*?)```/g, "<pre style='overflow:auto;padding:11px;background:#06140e;border:1px solid #19372a;border-radius:11px'>$1</pre>");
+        x = x.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+        x = x.replace(/^\s*[-•]\s+(.+)$/gm, "<li>$1</li>");
+        x = x.replace(/(<li>[\s\S]*?<\/li>)/g, "<ul>$1</ul>");
+        x = x.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
+        return "<p>" + x + "</p>";
+      }
+      function scroll() { const c = $("#chat"); c.scrollTop = c.scrollHeight }
+      function speak(text) {
+        if (!autoSpeak || !("speechSynthesis" in window)) return;
+        speechSynthesis.cancel();
+        const clean = String(text || "").replace(/\*\*/g, "").replace(/[`#•]/g, "").replace(/\n+/g, ". ");
+        const u = new SpeechSynthesisUtterance(clean); u.lang = lang; u.rate = .96; u.pitch = 1;
+        const voices = speechSynthesis.getVoices();
+        const wanted = voices.find(v => v.lang?.toLowerCase().startsWith(lang.toLowerCase().split("-")[0]));
+        if (wanted) u.voice = wanted;
+        speechSynthesis.speak(u);
+      }
+      function addMsg(role, text, cards = []) {
+        hero.style.display = "none";
+        const row = document.createElement("div"); row.className = "msg " + role;
+        const av = document.createElement("div"); av.className = "avatar"; av.textContent = role === "user" ? "നീ" : "O";
+        const bubble = document.createElement("div"); bubble.className = "bubble";
+        if (role === "user") bubble.textContent = text;
+        else {
+          const body = document.createElement("div"); body.className = "assistant-text"; body.innerHTML = md(text); bubble.appendChild(body);
+          const tools = document.createElement("div"); tools.className = "message-tools";
+          const sp = document.createElement("button"); sp.className = "mini"; sp.textContent = "🔊 കേൾപ്പിക്കുക"; sp.onclick = () => speak(text);
+          const cp = document.createElement("button"); cp.className = "mini"; cp.textContent = "⧉ Copy"; cp.onclick = () => navigator.clipboard?.writeText(text).then(() => toast("Copied"));
+          tools.append(sp, cp); bubble.appendChild(tools);
+          if (cards?.length) {
+            const grid = document.createElement("div"); grid.className = "cards";
+            cards.slice(0, 8).forEach(p => {
+              const c = document.createElement("div"); c.className = "card";
+              const img = p.imageUrl || p.image_url || p.image;
+              c.innerHTML = (img ? `<img src="${esc(img)}" loading="lazy" onerror="this.remove()">` : "") +
+                `<div class="card-body"><h3>${esc(p.name || p.title || "Place")}</h3><p>${esc(p.shortDescription || p.description || p.district || "")}</p></div>`;
+              c.onclick = () => { input.value = `Tell me more about ${p.name || "this place"}`; input.focus() };
+              grid.appendChild(c);
+            });
+            bubble.appendChild(grid);
+          }
+        }
+        row.append(av, bubble); messages.appendChild(row); scroll();
+      }
+      function typing() {
+        const row = document.createElement("div");
+        row.className = "msg assistant";
+        row.id = "typing";
+
+        row.innerHTML = `
+    <div class="avatar">O</div>
+    <div class="bubble">
+      <div class="ai-stream">
+        <div class="octopus-track">
+          <div class="octopus-runner">🐙</div>
+        </div>
+
+        <div class="stream-text">
+          <span class="stream-placeholder">Thinking</span>
+          <span class="stream-cursor"></span>
+        </div>
+      </div>
+    </div>
+  `;
+
+        messages.appendChild(row);
+        scroll();
+      }
+      function renderHistory() {
+        const box = $("#history"); box.innerHTML = "";
+        history.filter(x => x.role === "user").slice(-7).reverse().forEach(x => {
+          const b = document.createElement("button"); b.textContent = x.content; b.onclick = () => { input.value = x.content; input.focus() }; box.appendChild(b)
+        });
+      }
+      function setMode(m) { mode = m; $("#sideMode").textContent = m[0].toUpperCase() + m.slice(1); localStorage.setItem("octapus_v5_mode", m) }
+      function setPuterStatus(kind, text) {
+        $("#puterState").textContent = text;
+        const d = $("#puterDot"); d.classList.remove("ok", "warn", "err"); d.classList.add(kind);
+      }
+      async function checkPuter() {
+        try {
+          if (window.puter?.ai) { setPuterStatus("ok", "ready"); return true }
+          throw new Error("Puter.js not loaded");
+        } catch (e) { setPuterStatus("err", "offline"); return false }
+      }
+      async function connectPuter() {
+        if (!window.OctapusPuterV4) {
+          toast("Puter bridge not loaded. Check puter-agent.js.");
+          setPuterStatus("err", "bridge missing"); return false;
+        }
+        try {
+          if (window.puter?.auth?.isSignedIn?.()) {
+            setPuterStatus("ok", "connected"); $("#puterTopText").textContent = "Connected"; $("#puterTop").classList.add("connected"); return true;
+          }
+          await window.OctapusPuterV4.signIn();
+          setPuterStatus("ok", "connected"); $("#puterTopText").textContent = "Connected"; $("#puterTop").classList.add("connected");
+          toast("Puter AI connected");
+          return true;
+        } catch (e) {
+          setPuterStatus("warn", "not signed in");
+          toast("Puter sign-in cancelled or failed.");
+          return false;
+        }
+      }
+      async function askPuter(q) {
+        if (!window.OctapusPuterV4) {
+          throw new Error("Puter bridge unavailable");
+        }
+
+        const result = await window.OctapusPuterV4.ask({
+          message: q,
+          apiBase: apiBase,
+          history: history.slice(-10),
+          model: "gpt-5.6-luna",
+          maxToolRounds: 4,
+          maxTokens: 1400,
+          temperature: 0.2,
+          reasoningEffort: "medium"
+        });
+
+        const answer =
+          result?.answer ||
+          result?.response?.message?.content ||
+          "";
+
+        if (!answer) {
+          throw new Error("Puter returned an empty answer");
+        }
+
+        setPuterStatus("ok", "connected");
+        $("#puterTopText").textContent = "Connected";
+        $("#puterTop").classList.add("connected");
+
+        return {
+          answer: String(answer),
+          context: result?.context || {},
+          puter: result?.puter || {}
+        };
+      }
+      async function askV5(q) {
+        const res = await fetch(apiBase + "/api/v5/engine", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: q, mode, history: history.slice(-10), context: { mode, language: lang, voiceLocale: lang }, state, voice: false, voiceLocale: lang })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.message || data.error || "V5 request failed");
+        return data;
+      }
+      async function ask() {
+        if (busy) return;
+        const q = input.value.trim(); if (!q) return;
+        busy = true; send.disabled = true; addMsg("user", q); history.push({ role: "user", content: q });
+        input.value = ""; input.style.height = "auto"; typing();
+        try {
+          let answer = "", cards = [], source = "puter";
+          // Puter is the primary AI layer. V5 remains the deterministic fallback.
+          try {
+            const r = await askPuter(q); answer = r.answer;
+            // If the Puter agent returns place results in its context, use them as cards.
+            const possible = r.context?.places || r.context?.results || r.context?.placeResults;
+            if (Array.isArray(possible)) cards = possible;
+          } catch (puterError) {
+            console.error("PUTER ERROR:", puterError);
+
+            source = "v5";
+            setPuterStatus("warn", "fallback");
+
+            const puterErrorText =
+              puterError?.message ||
+              String(puterError) ||
+              "Unknown Puter error";
+
+            toast("Puter error — check the chat");
+
+            const data = await askV5(q);
+
+            // Temporarily show the exact Puter error so we can diagnose it.
+            data.reply =
+              (data.reply || "") +
+              "\n\n---\n**Puter diagnostic:**\n`" +
+              puterErrorText.replace(/`/g, "'") +
+              "`";
+            answer = data.reply || "മറുപടി ലഭിച്ചില്ല.";
+            cards = data.data?.places?.places || data.data?.places?.results || [];
+            state = data.state || state; mode = data.mode || mode;
+          }
+          $("#typing")?.remove();
+          addMsg("assistant", answer, cards);
+          history.push({ role: "assistant", content: answer });
+          localStorage.setItem("octapus_v5_history", JSON.stringify(history.slice(-20)));
+          localStorage.setItem("octapus_v5_state", JSON.stringify(state));
+          renderHistory();
+          if (autoSpeak) speak(answer);
+          if (source === "v5") toast("Puter unavailable — V5 fallback used");
+        } catch (e) {
+          $("#typing")?.remove();
+          addMsg("assistant", "ക്ഷമിക്കണം — ഇപ്പോൾ മറുപടി ലഭിച്ചില്ല.\n\n" + (e.message || "Backend പരിശോധിക്കൂ."));
+          toast(e.message || "Request failed");
+        } finally { busy = false; send.disabled = false; input.focus() }
+      }
+
+      function health() {
+        fetch(apiBase + "/api/health").then(r => r.json()).then(() => {
+          $("#apiDot").classList.add("ok"); $("#apiState").textContent = "online";
+        }).catch(() => { $("#apiDot").classList.add("err"); $("#apiState").textContent = "offline" });
+        fetch(apiBase + "/api/v5/voice/capabilities").then(r => r.json()).then(() => {
+          $("#voiceDot").classList.add("ok"); $("#voiceState").textContent = "ready";
+        }).catch(() => { $("#voiceDot").classList.add("warn"); $("#voiceState").textContent = "browser" });
+        checkPuter();
+        if (window.puter?.auth?.isSignedIn?.()) {
+          setPuterStatus("ok", "connected"); $("#puterTopText").textContent = "Connected"; $("#puterTop").classList.add("connected");
+        }
+      }
+
+      function setupRecognition() {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { $("#voiceState").textContent = "unsupported"; mic.disabled = true; return }
+        recognition = new SR(); recognition.lang = lang; recognition.interimResults = true; recognition.continuous = false;
+        recognition.onstart = () => {
+          listening = true; mic.classList.add("listening"); $("#voicePanel").classList.add("show", "listening");
+          $("#voiceLabel").textContent = lang === "ml-IN" ? "മലയാളത്തിൽ സംസാരിക്കൂ" : "Speak now";
+          $("#voiceSub").textContent = lang === "ml-IN" ? "ഞാൻ കേൾക്കുകയാണ്…" : "Listening…";
+        };
+        recognition.onresult = e => {
+          let finalText = "", interim = "";
+          for (let i = e.resultIndex; i < e.results.length; i++) {
+            const part = e.results[i][0].transcript; e.results[i].isFinal ? finalText += part : interim += part;
+          }
+          input.value = finalText || interim; input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 150) + "px";
+        };
+        recognition.onerror = e => {
+          if (e.error !== "aborted") toast(e.error === "not-allowed" ? "Mic permission അനുവദിക്കൂ." : "Voice input error: " + e.error);
+          stopRecognition();
+        };
+        recognition.onend = () => { const text = input.value.trim(); stopRecognition(); if (text && !busy) ask() };
+      }
+      function stopRecognition() { listening = false; mic.classList.remove("listening"); $("#voicePanel").classList.remove("show", "listening") }
+      function startVoice() {
+        if (!recognition) { setupRecognition(); if (!recognition) { toast("ഈ browser voice input support ചെയ്യുന്നില്ല."); return } }
+        if (listening) { recognition.stop(); return }
+        speechSynthesis.cancel(); recognition.lang = lang;
+        try { recognition.start() } catch (e) { }
+      }
+
+      document.querySelectorAll(".quick button").forEach(b => b.onclick = () => { input.value = b.textContent; input.focus() });
+      $("#send").onclick = ask;
+      input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask() } });
+      input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 150) + "px" });
+      mic.onclick = startVoice;
+      $("#stopVoice").onclick = () => recognition?.stop();
+      $("#closeVoice").onclick = () => { recognition?.abort(); stopRecognition() };
+      $("#clearBtn").onclick = () => { input.value = ""; input.focus() };
+      $("#autoVoice").onclick = () => { autoSpeak = !autoSpeak; $("#autoVoice").classList.toggle("active", autoSpeak); if (!autoSpeak) speechSynthesis.cancel() };
+      $("#newChat").onclick = () => { history = []; state = {}; localStorage.removeItem("octapus_v5_history"); localStorage.removeItem("octapus_v5_state"); messages.innerHTML = ""; hero.style.display = "block"; renderHistory() };
+      $("#puterConnect").onclick = connectPuter;
+      $("#puterTop").onclick = connectPuter;
+      $("#mlBtn").onclick = () => {
+        lang = "ml-IN"; localStorage.setItem("octapus_lang", lang); $("#mlBtn").classList.add("active"); $("#enBtn").classList.remove("active");
+        if (recognition) recognition.lang = lang; input.placeholder = "മലയാളത്തിൽ ചോദിക്കൂ… ഉദാ: വയനാട്ടിൽ ഇന്ന് എന്തൊക്കെ ചെയ്യാം?"
+      };
+      $("#enBtn").onclick = () => {
+        lang = "en-IN"; localStorage.setItem("octapus_lang", lang); $("#enBtn").classList.add("active"); $("#mlBtn").classList.remove("active");
+        if (recognition) recognition.lang = lang; input.placeholder = "Ask Octapus anything…"
+      };
+      document.addEventListener("keydown", e => { if (e.code === "Space" && e.target === document.body) { e.preventDefault(); startVoice() } });
+
+      setMode(mode);
+      if (lang === "en-IN") $("#enBtn").click(); else $("#mlBtn").click();
+      renderHistory(); setupRecognition(); health();
+      if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => { };
+    })();
+  </script>
+</body>
+
+</html>
