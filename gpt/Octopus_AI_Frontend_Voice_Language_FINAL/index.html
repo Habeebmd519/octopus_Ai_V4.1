@@ -26,6 +26,59 @@ main{min-width:0;height:100vh;display:flex;flex-direction:column}.top{height:66p
 .ai-stream{position:relative;overflow:hidden;min-height:32px;padding:3px 0 5px}.octopus-track{position:absolute;left:-15%;right:-15%;top:7px;height:30px;overflow:hidden;pointer-events:none}.octopus-runner{position:absolute;left:-45px;top:0;font-size:21px;opacity:.28;filter:drop-shadow(0 0 8px rgba(115,242,182,.55));animation:octopusRun 7s linear infinite}.octopus-runner:after{content:"🐙";position:absolute;left:-85px;top:5px;opacity:.22;transform:scale(.65)}@keyframes octopusRun{0%{transform:translateX(-60px)}25%{transform:translateX(25vw) translateY(-3px)}50%{transform:translateX(50vw) translateY(3px)}75%{transform:translateX(75vw) translateY(-3px)}100%{transform:translateX(115vw)}}.stream-text{position:relative;z-index:2;color:#dcebe4;white-space:pre-wrap}.stream-cursor{display:inline-block;width:2px;height:17px;margin-left:3px;background:var(--mint);animation:cursorBlink .75s steps(1) infinite}@keyframes cursorBlink{0%,45%{opacity:1}46%,100%{opacity:0}}
 @keyframes up{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 .mobile{display:none}@media(max-width:800px){.app{grid-template-columns:1fr}aside{display:none}.mobile{display:inline}.top{padding:0 13px}.chat{padding:20px 14px}.hero{margin-top:6vh}h1{font-size:47px}.hero p{font-size:13px}.bubble{max-width:92%}.composer-wrap{padding:8px 10px 14px}.panel{right:10px;top:68px}.top-actions .language-summary{display:none}}
+
+/* =========================
+   VOICE LISTENING SHEET
+   ========================= */
+.voice-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.52);backdrop-filter:blur(5px);
+  opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:70
+}
+.voice-overlay.show{opacity:1;pointer-events:auto}
+.voice-sheet{
+  position:fixed;left:50%;bottom:24px;transform:translate(-50%,24px) scale(.97);
+  width:min(430px,calc(100vw - 28px));padding:25px 22px 20px;text-align:center;
+  border:1px solid rgba(115,242,182,.22);border-radius:26px;
+  background:linear-gradient(160deg,rgba(10,31,22,.98),rgba(5,20,15,.98));
+  box-shadow:0 30px 100px rgba(0,0,0,.55),0 0 70px rgba(45,190,130,.10);
+  opacity:0;pointer-events:none;transition:transform .24s cubic-bezier(.2,.8,.2,1),opacity .2s ease;
+  z-index:80;overflow:hidden
+}
+.voice-sheet.show{opacity:1;pointer-events:auto;transform:translate(-50%,0) scale(1)}
+.voice-sheet:before{
+  content:"";position:absolute;left:15%;right:15%;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--mint),transparent);opacity:.8
+}
+.voice-orb-wrap{position:relative;width:104px;height:104px;margin:2px auto 14px}
+.voice-orb{
+  position:absolute;inset:18px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 28%,#eafff6 0 5%,#73f2b6 18%,#23745a 52%,#0b251b 76%);
+  border:1px solid rgba(181,255,217,.35);
+  box-shadow:0 0 0 8px rgba(115,242,182,.05),0 0 40px rgba(115,242,182,.22);
+  animation:voicePulse 1.35s ease-in-out infinite
+}
+.voice-orb span{font-size:25px;filter:drop-shadow(0 2px 7px rgba(0,0,0,.25))}
+.voice-ring{position:absolute;inset:4px;border:1px solid rgba(115,242,182,.22);border-radius:50%;animation:voiceRing 2.1s ease-out infinite}
+.voice-ring.ring-b{inset:0;animation-delay:1.05s}
+@keyframes voicePulse{50%{transform:scale(1.08);box-shadow:0 0 0 12px rgba(115,242,182,.06),0 0 58px rgba(115,242,182,.34)}}
+@keyframes voiceRing{0%{transform:scale(.68);opacity:.75}100%{transform:scale(1.08);opacity:0}}
+.voice-title{font-size:16px;font-weight:800;color:#f2fff9}
+.voice-subtitle{font-size:12px;color:var(--muted);margin-top:5px}
+.voice-live{height:27px;display:flex;justify-content:center;align-items:center;gap:4px;margin:12px auto 8px}
+.voice-live i{width:4px;height:8px;border-radius:99px;background:var(--mint);animation:voiceBars .8s ease-in-out infinite}
+.voice-live i:nth-child(2){animation-delay:.1s}.voice-live i:nth-child(3){animation-delay:.2s}
+.voice-live i:nth-child(4){animation-delay:.3s}.voice-live i:nth-child(5){animation-delay:.4s}
+@keyframes voiceBars{50%{height:24px;opacity:.55}}
+.voice-actions{display:flex;justify-content:center;gap:8px;margin-top:9px}
+.voice-actions button{min-height:40px;padding:9px 15px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.04);color:#dcebe4;cursor:pointer;font-size:11px}
+.voice-actions .voice-stop{border-color:rgba(115,242,182,.3);background:rgba(115,242,182,.09);color:var(--mint2)}
+@media(max-width:800px){
+  .voice-sheet{bottom:calc(10px + env(safe-area-inset-bottom));width:calc(100vw - 18px);border-radius:24px;padding:22px 17px 16px}
+  .voice-orb-wrap{width:92px;height:92px}
+  .voice-orb{inset:16px}
+  .voice-title{font-size:15px}
+}
+
 </style>
 </head>
 <body>
@@ -33,7 +86,6 @@ main{min-width:0;height:100vh;display:flex;flex-direction:column}.top{height:66p
 <aside>
   <div class="brand"><div class="logo">O</div><div><b>Octopus AI</b><small>കേരളത്തിന്റെ AI സഹായി</small></div></div>
   <button class="new" id="newChat">＋ പുതിയ ചാറ്റ്</button>
-  <button class="connect" id="puterConnect">⚡ Connect Puter AI</button>
   <div class="side-section"><div class="section-title">Recent chats</div><div class="history" id="history"></div></div>
   <div class="side-bottom"><div class="status">
     <div class="status-row"><span><i class="dot" id="puterDot"></i>Puter AI</span><span id="puterState">checking</span></div>
@@ -68,10 +120,27 @@ main{min-width:0;height:100vh;display:flex;flex-direction:column}.top{height:66p
 <div class="modebar" id="modebar">
 <button class="mode-btn" data-mode="normal">Normal</button><button class="mode-btn" data-mode="fun">Fun</button><button class="mode-btn" data-mode="quiz">Quiz</button><button class="mode-btn" data-mode="study">Study</button><button class="mode-btn" data-mode="travel">Travel</button><button class="mode-btn" data-mode="explore">Explore</button><button class="mode-btn" data-mode="local">Local</button><button class="mode-btn" data-mode="research">Research</button><button class="mode-btn" data-mode="story">Story</button>
 </div>
-<div class="composer"><button class="icon" id="clearBtn">⌫</button><textarea id="input" rows="1" placeholder="മലയാളത്തിൽ ചോദിക്കൂ… ഉദാ: വയനാട്ടിൽ ഇന്ന് എന്തൊക്കെ ചെയ്യാം?"></textarea><button class="icon mic" id="mic">🎙</button><button class="send" id="send">↑</button></div>
+<div class="composer"><button class="icon" id="clearBtn" title="Clear message" aria-label="Clear message">×</button><textarea id="input" rows="1" placeholder="മലയാളത്തിൽ ചോദിക്കൂ… ഉദാ: വയനാട്ടിൽ ഇന്ന് എന്തൊക്കെ ചെയ്യാം?"></textarea><button class="icon mic" id="mic">🎙</button><button class="send" id="send">↑</button></div>
 <div class="note">Puter AI → V4 tools / Firebase / search / places · V5 fallback · consent-aware activity telemetry</div>
 </div>
 </main></div>
+
+
+<div class="voice-overlay" id="voiceOverlay"></div>
+<div class="voice-sheet" id="voiceSheet" role="dialog" aria-modal="true" aria-label="Voice input">
+  <div class="voice-orb-wrap">
+    <div class="voice-ring ring-a"></div>
+    <div class="voice-ring ring-b"></div>
+    <div class="voice-orb"><span>🎙</span></div>
+  </div>
+  <div class="voice-title" id="voiceTitle">മലയാളത്തിൽ സംസാരിക്കൂ</div>
+  <div class="voice-subtitle" id="voiceSubtitle">ഞാൻ കേൾക്കുകയാണ്…</div>
+  <div class="voice-live" id="voiceLive"><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="voice-actions">
+    <button class="voice-stop" id="stopVoice">നിർത്തുക</button>
+    <button class="voice-close" id="closeVoice">അടയ്ക്കുക</button>
+  </div>
+</div>
 
 <div class="panel" id="settingsPanel">
 <div class="panel-head"><b>Octopus preferences</b><button class="close" data-close="settingsPanel">×</button></div>
@@ -116,7 +185,52 @@ function addDOM(role,text,cards=[]){let r=document.createElement("div");r.classN
 function addMsg(role,text,cards=[]){$("#hero").style.display="none";addDOM(role,text,cards);addStored(role,text,{cards});renderHistory()}
 function renderMessages(c){$("#messages").innerHTML="";$("#hero").style.display=c.messages.length?"none":"block";c.messages.forEach(m=>addDOM(m.role,m.content,m.cards||[]));scroll()}
 
-function setLanguage(v,telemetry=true){if(!LANG[v])v="ml";language=v;localStorage.setItem(K.language,v);$("#languageBtn").textContent=LANG[v].label;$("#sideLanguage").textContent=LANG[v].label;$("#input").placeholder=LANG[v].placeholder;if(recognition)recognition.lang=LANG[v].speech;current().language=v;saveChats();if(telemetry)sendActivity("language_changed",{language:v})}
+function applyLanguageUI(){
+  const en=language==="en", mix=language==="mix";
+  const t={
+    newChat: en?"＋ New chat":mix?"＋ പുതിയ Chat":"＋ പുതിയ ചാറ്റ്",
+    recent: en?"RECENT CHATS":mix?"RECENT CHATS / പുതിയ ചാറ്റുകൾ":"RECENT CHATS",
+    location: en?"⌖ Location":mix?"⌖ Location / സ്ഥലം":"⌖ Location",
+    settings: en?"⚙ Settings":mix?"⚙ Settings / ക്രമീകരണം":"⚙ Settings",
+    voice: en?"🔊 Voice":mix?"🔊 Voice / ശബ്ദം":"🔊 Voice",
+    connect: en?"Connect Puter AI":mix?"Connect Puter AI":"Connect Puter AI",
+    badge: en?"Puter AI + V5 Engine + Voice":mix?"Puter AI + V5 Engine + Malayalam Voice":"Puter AI + V5 Engine + Malayalam Voice",
+    title1: en?"Ask Kerala.":mix?"കേരളത്തോട് ചോദിക്കൂ.":"കേരളത്തോട് ചോദിക്കൂ.",
+    title2: en?"Get a useful answer.":mix?"ഉപയോഗപ്രദമായ മറുപടി നേടൂ.":"ഉപയോഗപ്രദമായ മറുപടി നേടൂ.",
+    desc: en?"Places, food, travel, culture, study, quiz and research — ask in English, Malayalam, or both.":mix?"സ്ഥലങ്ങൾ, ഭക്ഷണം, യാത്ര, സംസ്കാരം, പഠനം, quiz, research — മലയാളത്തിലോ English-ലോ, അല്ലെങ്കിൽ രണ്ടും ചേർത്ത് ചോദിക്കാം.":"സ്ഥലങ്ങൾ, ഭക്ഷണം, യാത്ര, സംസ്കാരം, പഠനം, quiz, research — മലയാളത്തിലോ ശബ്ദത്തിലോ ചോദിക്കാം.",
+    placeholder: LANG[language].placeholder,
+    note: en?"Puter AI → V4 tools / Firebase / search / places · V5 fallback · privacy-aware activity":"Puter AI → V4 tools / Firebase / search / places · V5 fallback · consent-aware activity telemetry"
+  };
+  $("#newChat").textContent=t.newChat;
+  const recent=$("#history")?.parentElement?.querySelector(".section-title"); if(recent)recent.textContent=t.recent;
+  $("#languageBtn").textContent=LANG[language].label;
+  $("#locationBtn").textContent=t.location;
+  $("#settingsBtn").textContent=t.settings;
+  $("#autoVoice").textContent=t.voice;
+  $("#input").placeholder=t.placeholder;
+  const badge=document.querySelector(".badge");if(badge)badge.innerHTML='<i></i> '+t.badge;
+  const h1=document.querySelector(".hero h1");if(h1)h1.innerHTML=esc(t.title1)+'<br><span class="gradient">'+esc(t.title2)+'</span>';
+  const hp=document.querySelector(".hero p");if(hp)hp.textContent=t.desc;
+  const note=document.querySelector(".note");if(note)note.textContent=t.note;
+  const qs=en?
+    ["Good places for a 2-day Munnar trip?","Best vegetarian restaurants in Kochi?","Quiz me","Tell me a Kerala story"]:
+    mix?
+    ["മുന്നാറിൽ 2 ദിവസത്തേക്ക് പോകാൻ നല്ല സ്ഥലങ്ങൾ?","കൊച്ചിയിൽ നല്ല വെജിറ്റേറിയൻ റെസ്റ്റോറന്റ്?","എന്നെ quiz ചെയ്യൂ","കേരളത്തെക്കുറിച്ച് ഒരു കഥ പറയൂ"]:
+    ["മുന്നാറിൽ 2 ദിവസത്തേക്ക് പോകാൻ നല്ല സ്ഥലങ്ങൾ?","കൊച്ചിയിൽ നല്ല വെജിറ്റേറിയൻ റെസ്റ്റോറന്റ്?","എന്നെ quiz ചെയ്യൂ","കേരളത്തെക്കുറിച്ച് ഒരു കഥ പറയൂ"];
+  document.querySelectorAll(".quick button").forEach((b,i)=>{if(qs[i])b.textContent=qs[i]});
+  const modes=en?["Normal","Fun","Quiz","Study","Travel","Explore","Local","Research","Story"]:
+    ["Normal","Fun","Quiz","Study","Travel","Explore","Local","Research","Story"];
+  document.querySelectorAll(".mode-btn").forEach((b,i)=>{if(modes[i])b.textContent=modes[i]});
+  const ss=document.querySelector("#settingsPanel .panel-head b");if(ss)ss.textContent=en?"Octopus preferences":"Octopus preferences";
+  const labels=document.querySelectorAll("#settingsPanel .field label");if(labels.length>=2){labels[0].textContent=en?"Response language":"Response language";labels[1].textContent=en?"Conversation mode":"Conversation mode"}
+  const vs=$("#voiceTitle"),vsub=$("#voiceSubtitle"),stop=$("#stopVoice"),close=$("#closeVoice");
+  if(vs)vs.textContent=en?"Speak now":mix?"മലയാളം + English-ൽ സംസാരിക്കൂ":"മലയാളത്തിൽ സംസാരിക്കൂ";
+  if(vsub)vsub.textContent=en?"I'm listening…":mix?"ഞാൻ കേൾക്കുകയാണ്…":"ഞാൻ കേൾക്കുകയാണ്…";
+  if(stop)stop.textContent=en?"Stop": "നിർത്തുക";
+  if(close)close.textContent=en?"Close":"അടയ്ക്കുക";
+  const ph=$("#puterConnect");if(ph)ph.textContent="⚡ "+t.connect;
+}
+function setLanguage(v,telemetry=true){if(!LANG[v])v="ml";language=v;localStorage.setItem(K.language,v);applyLanguageUI();$("#sideLanguage").textContent=LANG[v].label;if(recognition)recognition.lang=LANG[v].speech;current().language=v;saveChats();if(telemetry)sendActivity("language_changed",{language:v})}
 function setMode(v,telemetry=true){if(!MODES.includes(v))v="normal";mode=v;localStorage.setItem(K.mode,v);$("#sideMode").textContent=v[0].toUpperCase()+v.slice(1);$("#modeSelect").value=v;document.querySelectorAll(".mode-btn").forEach(x=>x.classList.toggle("active",x.dataset.mode===v));current().mode=v;saveChats();if(telemetry)sendActivity("mode_changed",{mode:v})}
 
 function locationUI(){let s=locationInfo.status||"not_shared";$("#sideLocation").textContent=s==="granted"?(locationInfo.area||"Shared"):s==="denied"?"Private":"Not shared";let b=$("#locationStatus");b.className="location-status "+(s==="granted"?"ok":s==="denied"?"warn":"");b.textContent=s==="granted"?`Location access enabled${locationInfo.area?" · "+locationInfo.area:""}.`:s==="denied"?"Location is private.":"Location is not shared."}
@@ -132,8 +246,8 @@ async function askPuter(q){if(!window.OctapusPuterV4)throw Error("Puter bridge u
 async function askV5(q){let c=current();let res=await fetch(apiBase+"/api/v5/engine",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:q,mode,language,languagePreference:language,history:c.messages.slice(-12),context:{mode,language,languagePreference:language,voiceLocale:LANG[language].speech,visitorId:visitor,chatId:c.id,location:locationInfo.status==="granted"?{lat:locationInfo.lat,lng:locationInfo.lng,accuracy:locationInfo.accuracy}:null},state:read("octopus_v5_state_v2",{}),voice:false,voiceLocale:LANG[language].speech})});let d=await res.json();if(!res.ok||!d.ok)throw Error(d.message||d.error||"V5 request failed");return d}
 
 function speak(text){if(!autoSpeak||!("speechSynthesis"in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(String(text||"").replace(/\*\*/g,"").replace(/[`#•]/g,"").replace(/\n+/g, ". "));u.lang=LANG[language].speech;u.rate=.96;let v=speechSynthesis.getVoices().find(x=>x.lang?.toLowerCase().startsWith(u.lang.split("-")[0]));if(v)u.voice=v;speechSynthesis.speak(u)}
-function setupRecognition(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$("#mic").disabled=true;return}recognition=new SR();recognition.lang=LANG[language].speech;recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{listening=true;$("#mic").classList.add("listening");sendActivity("voice_started")};recognition.onresult=e=>{let f="",i="";for(let n=e.resultIndex;n<e.results.length;n++){let t=e.results[n][0].transcript;e.results[n].isFinal?f+=t:i+=t}$("#input").value=f||i;$("#input").style.height="auto";$("#input").style.height=Math.min($("#input").scrollHeight,150)+"px"};recognition.onerror=e=>{if(e.error!=="aborted")toast("Voice input: "+e.error);stopRecognition()};recognition.onend=()=>{let t=$("#input").value.trim();stopRecognition();if(t&&!busy)ask()}}
-function stopRecognition(){listening=false;$("#mic").classList.remove("listening")}
+function setupRecognition(){let SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){$("#mic").disabled=true;return}recognition=new SR();recognition.lang=LANG[language].speech;recognition.interimResults=true;recognition.continuous=false;recognition.onstart=()=>{listening=true;$("#mic").classList.add("listening");$("#voiceSheet").classList.add("show");$("#voiceOverlay").classList.add("show");sendActivity("voice_started")};recognition.onresult=e=>{let f="",i="";for(let n=e.resultIndex;n<e.results.length;n++){let t=e.results[n][0].transcript;e.results[n].isFinal?f+=t:i+=t}$("#input").value=f||i;$("#input").style.height="auto";$("#input").style.height=Math.min($("#input").scrollHeight,150)+"px"};recognition.onerror=e=>{if(e.error!=="aborted")toast("Voice input: "+e.error);stopRecognition()};recognition.onend=()=>{let t=$("#input").value.trim();stopRecognition();if(t&&!busy)ask()}}
+function stopRecognition(){listening=false;$("#mic").classList.remove("listening");$("#voiceSheet").classList.remove("show");$("#voiceOverlay").classList.remove("show");}
 function startVoice(){if(!recognition){setupRecognition();if(!recognition)return}if(listening){recognition.stop();return}speechSynthesis.cancel();recognition.lang=LANG[language].speech;try{recognition.start()}catch(_){}}
 function typing(){let r=document.createElement("div");r.className="msg assistant";r.id="typing";r.innerHTML='<div class="avatar">O</div><div class="bubble"><div class="ai-stream"><div class="octopus-track"><div class="octopus-runner">🐙</div></div><div class="stream-text">Thinking <span class="stream-cursor"></span></div></div></div>';$("#messages").appendChild(r);scroll()}
 
@@ -153,13 +267,17 @@ document.querySelectorAll(".quick button").forEach(b=>b.onclick=()=>{$("#input")
 $("#send").onclick=ask;$("#input").addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();ask()}});
 $("#input").addEventListener("input",()=>{$("#input").style.height="auto";$("#input").style.height=Math.min($("#input").scrollHeight,150)+"px"});
 $("#mic").onclick=startVoice;$("#clearBtn").onclick=()=>{$("#input").value="";$("#input").focus()};
+$("#stopVoice").onclick=()=>{if(recognition)recognition.stop();else stopRecognition()};
+$("#closeVoice").onclick=()=>{if(recognition)recognition.abort();stopRecognition()};
+$("#voiceOverlay").onclick=()=>{if(recognition)recognition.abort();stopRecognition()};
+
 $("#autoVoice").onclick=()=>{autoSpeak=!autoSpeak;localStorage.setItem(K.voice,autoSpeak?"1":"0");$("#autoVoice").classList.toggle("active",autoSpeak);if(!autoSpeak)speechSynthesis.cancel()};
-$("#puterConnect").onclick=connectPuter;$("#puterTop").onclick=connectPuter;$("#languageBtn").onclick=()=>{$("#settingsPanel").classList.add("show");$("#languageSelect").focus()};
+$("#puterTop").onclick=connectPuter;$("#languageBtn").onclick=()=>{$("#settingsPanel").classList.add("show");$("#languageSelect").focus()};
 $("#languageSelect").onchange=e=>setLanguage(e.target.value);$("#modeSelect").onchange=e=>setMode(e.target.value);
 
 async function health(){try{let r=await fetch(apiBase+"/api/health");if(!r.ok)throw 0;$("#apiDot").classList.add("ok");$("#apiState").textContent="online"}catch(_){$("#apiDot").classList.add("err");$("#apiState").textContent="offline"}if(window.puter?.ai)setPuter("ok","ready");if(window.puter?.auth?.isSignedIn?.()){setPuter("ok","connected");$("#puterTopText").textContent="Connected";$("#puterTop").classList.add("connected")}}
 if(!chats.length)newChat();else if(!chats.some(c=>c.id===activeId))activeId=chats[0].id;
-setLanguage(language,false);setMode(mode,false);$("#languageSelect").value=language;$("#modeSelect").value=mode;locationUI();renderHistory();renderMessages(current());setupRecognition();health();heartbeat();sendActivity("page_open",{chat_id:current().id});
+setLanguage(language,false);setMode(mode,false);$("#languageSelect").value=language;applyLanguageUI();$("#modeSelect").value=mode;locationUI();renderHistory();renderMessages(current());setupRecognition();health();heartbeat();sendActivity("page_open",{chat_id:current().id});
 document.addEventListener("visibilitychange",()=>{sendActivity(document.visibilityState==="visible"?"page_visible":"page_hidden",{visibility:document.visibilityState});if(document.visibilityState==="visible")heartbeat()});
 window.addEventListener("beforeunload",()=>sendActivity("page_hidden",{visibility:"hidden"}));
 setInterval(async()=>{let q=read("octopus_activity_queue_v1",[]);if(!q.length)return;try{let r=await fetch(apiBase+"/api/activity/batch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({events:q.slice(-50)})});if(r.ok)localStorage.removeItem("octopus_activity_queue_v1")}catch(_){}},45000);
