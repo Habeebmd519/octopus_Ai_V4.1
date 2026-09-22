@@ -37,6 +37,10 @@ except ImportError:
     from intent_detector import should_use_live_search, build_live_search_query
     from response_builder import build_v3_response
 
+from v4.activity_admin import register_activity_admin
+
+
+
 
 # ============================================================
 # KERALA AI BACKEND V3 - PRACTICAL UI VERSION
@@ -123,6 +127,13 @@ except Exception as firebase_error:
     db = None
     FIREBASE_ENABLED = False
     print(f"Firebase: disabled ({firebase_error})")
+
+
+# ============================================================
+# ACTIVITY / ADMIN DASHBOARD
+# ============================================================
+
+register_activity_admin(app, db)
 
 
 NTES_URL = "https://enquiry.indianrail.gov.in/ntes/"
