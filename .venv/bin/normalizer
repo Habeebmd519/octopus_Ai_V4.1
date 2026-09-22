@@ -1,0 +1,8 @@
+#!/bin/sh
+'''exec' "/Users/muhammedhabeeb/Desktop/Octapus_AI_V4_1_Puter_Web 2/.venv/bin/python3.11" "$0" "$@"
+' '''
+import sys
+from charset_normalizer.cli import cli_detect
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(cli_detect())

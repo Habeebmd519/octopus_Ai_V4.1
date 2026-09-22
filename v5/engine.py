@@ -82,7 +82,7 @@ class OctapusV5Engine:
                 data["services"] = r
             elif step == "travel":
                 origin = context.get("origin") or location.get("text") or "current location"
-                destination = context.get("destination") or context.get("current_place_name") or message
+                destination = parsed.get("destination") or context.get("destination") or context.get("current_place_name") or message
                 r = self._call("travel_info", origin=origin, destination=destination)
                 data["travel"] = r
             elif step == "live":

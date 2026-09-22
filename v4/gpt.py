@@ -60,7 +60,7 @@ except ImportError:
 load_dotenv()
 
 APP_NAME = os.getenv("APP_NAME", "KeralaTour AI Backend V3")
-PORT = int(os.getenv("PORT", "5000"))
+PORT = int(os.getenv("PORT", "5002"))
 ENV = os.getenv("ENV", "development")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
@@ -96,19 +96,34 @@ CORS(app)
 
 
 # ============================================================
-# FIREBASE INIT
+# FIREBASE INIT — OPTIONAL
 # ============================================================
 
-if not firebase_admin._apps:
-    if FIREBASE_SERVICE_ACCOUNT_JSON:
-        cred_dict = json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
-        cred = credentials.Certificate(cred_dict)
-    else:
-        cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT)
+db = None
+FIREBASE_ENABLED = False
 
-    firebase_admin.initialize_app(cred)
+try:
+    if not firebase_admin._apps:
+        if FIREBASE_SERVICE_ACCOUNT_JSON:
+            cred_dict = json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+        elif os.path.exists(FIREBASE_SERVICE_ACCOUNT):
+            cred = credentials.Certificate(FIREBASE_SERVICE_ACCOUNT)
+            firebase_admin.initialize_app(cred)
+        else:
+            print("Firebase: no service account configured — using local fallbacks.")
 
-db = firestore.client()
+    if firebase_admin._apps:
+        db = firestore.client()
+        FIREBASE_ENABLED = True
+        print("Firebase: connected.")
+
+except Exception as firebase_error:
+    db = None
+    FIREBASE_ENABLED = False
+    print(f"Firebase: disabled ({firebase_error})")
+
 
 NTES_URL = "https://enquiry.indianrail.gov.in/ntes/"
 
