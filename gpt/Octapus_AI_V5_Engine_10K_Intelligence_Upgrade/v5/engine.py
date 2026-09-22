@@ -11209,6 +11209,7 @@ def _quality_snapshot(self,message,data):
             "grounded":bool(data.get("places") or data.get("knowledge") or data.get("live") or data.get("services")),
             "has_current_evidence":bool(data.get("live"))}
 
+OctapusV5Engine.quality_snapshot=_quality_snapshot
 
 REGRESSION_QUERIES = (
     "hi","hello Octapus","മുന്നാറിൽ 2 ദിവസത്തേക്ക് പോകാൻ നല്ല സ്ഥലങ്ങൾ?",
@@ -11502,7 +11503,3 @@ class OctapusV5Engine:
                 "web_research":bool(self.web),"deterministic":True}
 
 # Expanded routing vocabulary is declared above.
-
-
-# Attach optional quality diagnostics after the class has been defined.
-OctapusV5Engine.quality_snapshot = _quality_snapshot
